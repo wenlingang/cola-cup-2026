@@ -1990,3 +1990,38 @@ main {
   color: var(--low);
 }
 
+.adm-sheet .adm-mblock + .adm-mblock {
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+}
+.adm-roster-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+}
+.adm-roster-head .cnt-sel {
+  font-size: 12px;
+  color: var(--mid);
+}
+.adm-roster-head .adm-toggle {
+  padding: 0;
+}
+.adm-votes .vchip-sel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  user-select: none;
+}
+.adm-votes .vchip-sel input {
+  cursor: pointer;
+  margin: 0;
+  accent-color: var(--red);
+}
+.adm-votes .vchip-sel.off {
+  color: var(--low);
+  text-decoration: line-through;
+}
+

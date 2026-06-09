@@ -1,7 +1,8 @@
 import { db } from "../db/client";
 import type { OddsRow } from "../db/queries/matches";
-import { getVoteTally } from "../db/queries/votes";
+import { getVoteTally, getMatchVotesDetailed } from "../db/queries/votes";
 import { computeVoteOdds } from "./voteOdds";
+import { deltasFromVotes } from "./pariMutuel";
 import { bottlesToBuy, bottlesToReceive, platformPool } from "./decimalOdds";
 import { allowsDraw, isKnockout, type Pick } from "./stage";
 import { VOTE_CLOSES_MS_BEFORE } from "./matchState";
@@ -145,45 +146,6 @@ export function recordResult(
   return { ok: true };
 }
 
-type VoteRow = { user_id: number; pick: Pick; stake: number };
-
-type VoteDelta = VoteRow & { d_used: number; won: number; delta: number };
-
-function getMatchVotes(matchId: number): VoteRow[] {
-  return db
-    .prepare("SELECT user_id, pick, stake FROM votes WHERE match_id = ?")
-    .all(matchId) as VoteRow[];
-}
-
-/**
- * Pari-mutuel payout (pure, no writes): each loser forfeits exactly their stake
- * into the pool; the winners split that pool in proportion to their stake. The
- * batch is zero-sum, so total winnings can never exceed the pool — the house
- * never subsidises (it only keeps the floored remainder). d_used is the implied
- * pool decimal for the bettor's own pick (total pool ÷ that pick's stake).
- */
-function deltasFromVotes(votes: VoteRow[], result: Pick): VoteDelta[] {
-  const total = votes.reduce((sum, v) => sum + v.stake, 0);
-  const winStake = votes
-    .filter((v) => v.pick === result)
-    .reduce((sum, v) => sum + v.stake, 0);
-  const loseStake = total - winStake;
-  const pickStake: Partial<Record<Pick, number>> = {};
-  for (const v of votes) pickStake[v.pick] = (pickStake[v.pick] ?? 0) + v.stake;
-
-  return votes.map((v) => {
-    const won = v.pick === result ? 1 : 0;
-    const delta = won
-      ? winStake > 0
-        ? (v.stake / winStake) * loseStake
-        : 0
-      : -v.stake;
-    const ownStake = pickStake[v.pick] ?? v.stake;
-    const d_used = ownStake > 0 ? total / ownStake : 1;
-    return { ...v, d_used, won, delta };
-  });
-}
-
 type SettleableMatch = {
   id: number;
   stage: string;
@@ -210,13 +172,50 @@ function validateForSettle(
   return { ok: true };
 }
 
+/** A match's full roster of voters — always the complete list, regardless of
+ *  who is currently included, so the UI can render a toggleable checklist. */
+export type RosterVote = {
+  userId: number;
+  nickname: string;
+  emoji: string | null;
+  pick: Pick;
+  stake: number;
+};
+
 export type PreviewMatch = {
   matchId: number;
   result: Pick;
   homeScore: number | null;
   awayScore: number | null;
   voters: number;
+  votes: RosterVote[];
 };
+
+/** Per-match opt-in: matchId (string after JSON) → userIds participating in the
+ *  settlement. A missing key means "include everyone who voted that match"; an
+ *  explicit empty array means "include nobody — skip the match". */
+export type IncludedMap = Record<string, number[]>;
+
+/** Resolve the participating voters for one match. `provided` distinguishes a
+ *  missing key (default to all voters) from an explicit empty array (skip). The
+ *  ids are intersected with the real voters, so the client can never settle
+ *  someone who didn't actually vote that match. */
+function resolveIncluded(
+  matchId: number,
+  included: IncludedMap | undefined,
+  realUserIds: Set<number>,
+): { userIds: Set<number>; provided: boolean } {
+  const raw = included?.[String(matchId)];
+  if (!Array.isArray(raw)) {
+    return { userIds: new Set(realUserIds), provided: false };
+  }
+  const userIds = new Set<number>();
+  for (const value of raw) {
+    const id = Number(value);
+    if (Number.isFinite(id) && realUserIds.has(id)) userIds.add(id);
+  }
+  return { userIds, provided: true };
+}
 
 export type PreviewUser = {
   userId: number;
@@ -236,9 +235,23 @@ export type SettlementPreview = {
   platformBottles: number;
 };
 
+function toRosterVotes(detailed: ReturnType<typeof getMatchVotesDetailed>): RosterVote[] {
+  return detailed.map((v) => ({
+    userId: v.user_id,
+    nickname: v.nickname,
+    emoji: v.emoji,
+    pick: v.pick,
+    stake: v.stake,
+  }));
+}
+
 /** Dry-run a batch settlement: compute each person's net buy/receive for the
- *  selected matches without writing anything. */
-export function previewSettlement(matchIds: number[]): SettlementPreview {
+ *  selected matches without writing anything. `included` opts specific voters
+ *  in per match (defaults to everyone who voted). */
+export function previewSettlement(
+  matchIds: number[],
+  included?: IncludedMap,
+): SettlementPreview {
   const matches: PreviewMatch[] = [];
   const skipped: { matchId: number; reason: string }[] = [];
   const netByUser = new Map<number, number>();
@@ -251,8 +264,15 @@ export function previewSettlement(matchIds: number[]): SettlementPreview {
       continue;
     }
     const match = m!;
-    const votes = getMatchVotes(matchId);
-    for (const d of deltasFromVotes(votes, match.result as Pick)) {
+    const detailed = getMatchVotesDetailed(matchId);
+    const realUserIds = new Set(detailed.map((v) => v.user_id));
+    const { userIds, provided } = resolveIncluded(matchId, included, realUserIds);
+    const participating = detailed.filter((v) => userIds.has(v.user_id));
+    if (provided && participating.length === 0) {
+      skipped.push({ matchId, reason: "未选择参与者" });
+      continue;
+    }
+    for (const d of deltasFromVotes(participating, match.result as Pick)) {
       netByUser.set(d.user_id, (netByUser.get(d.user_id) ?? 0) + d.delta);
     }
     matches.push({
@@ -260,7 +280,8 @@ export function previewSettlement(matchIds: number[]): SettlementPreview {
       result: match.result as Pick,
       homeScore: match.home_score,
       awayScore: match.away_score,
-      voters: votes.length,
+      voters: detailed.length,
+      votes: toRosterVotes(detailed),
     });
   }
 
@@ -313,6 +334,7 @@ export type SettleSelectedResult =
 export function settleSelected(
   matchIds: number[],
   settlerId: number,
+  included?: IncludedMap,
 ): SettleSelectedResult {
   const now = Date.now();
 
@@ -343,9 +365,16 @@ export function settleSelected(
         continue;
       }
       const result = m!.result as Pick;
+      const detailed = getMatchVotesDetailed(matchId);
+      const realUserIds = new Set(detailed.map((v) => v.user_id));
+      const { userIds, provided } = resolveIncluded(matchId, included, realUserIds);
+      const participating = detailed.filter((v) => userIds.has(v.user_id));
+      if (provided && participating.length === 0) {
+        skipped.push({ matchId, reason: "未选择参与者" });
+        continue;
+      }
       ensureLocked(matchId, now); // freeze display snapshots (crowd + market)
-      const votes = getMatchVotes(matchId);
-      for (const d of deltasFromVotes(votes, result)) {
+      for (const d of deltasFromVotes(participating, result)) {
         insertLedger.run({
           matchId,
           userId: d.user_id,

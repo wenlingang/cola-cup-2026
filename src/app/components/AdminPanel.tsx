@@ -4,7 +4,17 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { PICK_LABELS, allowsDraw, type Pick } from "../../lib/stage";
 import { formatBottles, DISPLAY_TIME_ZONE } from "../../lib/format";
-import type { SettlementPreview } from "../../lib/settlement";
+import type {
+  SettlementPreview,
+  RosterVote,
+  IncludedMap,
+} from "../../lib/settlement";
+import { deltasFromVotes } from "../../lib/pariMutuel";
+import {
+  bottlesToBuy,
+  bottlesToReceive,
+  platformPool,
+} from "../../lib/decimalOdds";
 import type { SettlementDetail } from "../../db/queries/settlements";
 
 export type TodoMatch = {
@@ -98,6 +108,21 @@ type PostFn = (
   body: object,
 ) => Promise<Record<string, unknown> | null>;
 
+/** Serialize the per-match opt-in for the API. Matches with no voters are left
+ *  out so the backend settles them by default (an explicit empty array would be
+ *  read as "exclude everyone" and skip the match). */
+function serializeIncluded(
+  preview: SettlementPreview,
+  included: Map<number, Set<number>>,
+): IncludedMap {
+  const out: IncludedMap = {};
+  for (const m of preview.matches) {
+    if (m.votes.length === 0) continue;
+    out[String(m.matchId)] = [...(included.get(m.matchId) ?? new Set<number>())];
+  }
+  return out;
+}
+
 export function AdminPanel({
   todo,
   records,
@@ -110,6 +135,7 @@ export function AdminPanel({
   const [msg, setMsg] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [preview, setPreview] = useState<SettlementPreview | null>(null);
+  const [included, setIncluded] = useState<Map<number, Set<number>>>(new Map());
   const [busy, setBusy] = useState(false);
 
   const post: PostFn = async (url, body) => {
@@ -143,8 +169,35 @@ export function AdminPanel({
     setBusy(false);
     if (!data) return;
     const pv = data as unknown as SettlementPreview;
-    if (!pv.ok) setMsg(`❌ ${pv.error ?? "没有可结算的比赛"}`);
-    else setPreview(pv);
+    if (!pv.ok) {
+      setMsg(`❌ ${pv.error ?? "没有可结算的比赛"}`);
+      return;
+    }
+    const init = new Map<number, Set<number>>();
+    for (const m of pv.matches) {
+      init.set(m.matchId, new Set(m.votes.map((v) => v.userId)));
+    }
+    setIncluded(init);
+    setPreview(pv);
+  }
+
+  function toggleUser(matchId: number, userId: number) {
+    setIncluded((prev) => {
+      const next = new Map(prev);
+      const set = new Set(next.get(matchId) ?? []);
+      if (set.has(userId)) set.delete(userId);
+      else set.add(userId);
+      next.set(matchId, set);
+      return next;
+    });
+  }
+
+  function toggleMatchAll(matchId: number, check: boolean, userIds: number[]) {
+    setIncluded((prev) => {
+      const next = new Map(prev);
+      next.set(matchId, check ? new Set(userIds) : new Set());
+      return next;
+    });
   }
 
   async function confirmSettle() {
@@ -152,11 +205,13 @@ export function AdminPanel({
     setBusy(true);
     const data = await post("/api/admin/settle", {
       matchIds: preview.matches.map((m) => m.matchId),
+      included: serializeIncluded(preview, included),
       commit: true,
     });
     setBusy(false);
     if (!data) return;
     setPreview(null);
+    setIncluded(new Map());
     setSelected(new Set());
     setTab("records");
     setMsg(`✅ 已结算 ${(data.settled as number) ?? 0} 场`);
@@ -223,7 +278,10 @@ export function AdminPanel({
         <PreviewSheet
           preview={preview}
           todoMap={todoMap}
+          included={included}
           busy={busy}
+          onToggleUser={toggleUser}
+          onToggleMatchAll={toggleMatchAll}
           onConfirm={confirmSettle}
           onCancel={() => setPreview(null)}
         />
@@ -374,21 +432,82 @@ function TodoRow({
   );
 }
 
+type PreviewPayUser = {
+  userId: number;
+  nickname: string;
+  emoji: string | null;
+  net: number;
+  owe: number;
+  recv: number;
+};
+
+/** Recompute each person's net buy/receive from the current per-match opt-in.
+ *  Mirrors the backend's buildPreviewUsers + platformPool exactly (same pure
+ *  pari-mutuel + rounding functions), so the preview matches what gets committed. */
+function recomputePayouts(
+  preview: SettlementPreview,
+  included: Map<number, Set<number>>,
+): { users: PreviewPayUser[]; platformBottles: number } {
+  const netByUser = new Map<number, number>();
+  const info = new Map<number, { nickname: string; emoji: string | null }>();
+
+  for (const m of preview.matches) {
+    const inc = included.get(m.matchId) ?? new Set<number>();
+    for (const v of m.votes) {
+      if (!info.has(v.userId)) info.set(v.userId, { nickname: v.nickname, emoji: v.emoji });
+    }
+    const participating = m.votes
+      .filter((v) => inc.has(v.userId))
+      .map((v) => ({ user_id: v.userId, pick: v.pick, stake: v.stake }));
+    for (const d of deltasFromVotes(participating, m.result)) {
+      netByUser.set(d.user_id, (netByUser.get(d.user_id) ?? 0) + d.delta);
+    }
+  }
+
+  const users = [...netByUser.entries()]
+    .map(([userId, net]) => ({
+      userId,
+      nickname: info.get(userId)?.nickname ?? "?",
+      emoji: info.get(userId)?.emoji ?? null,
+      net,
+      owe: bottlesToBuy(net),
+      recv: bottlesToReceive(net),
+    }))
+    .sort((a, b) => b.net - a.net);
+
+  return { users, platformBottles: platformPool([...netByUser.values()]) };
+}
+
 function PreviewSheet({
   preview,
   todoMap,
+  included,
   busy,
+  onToggleUser,
+  onToggleMatchAll,
   onConfirm,
   onCancel,
 }: {
   preview: SettlementPreview;
   todoMap: Map<number, TodoMatch>;
+  included: Map<number, Set<number>>;
   busy: boolean;
+  onToggleUser: (matchId: number, userId: number) => void;
+  onToggleMatchAll: (matchId: number, check: boolean, userIds: number[]) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const receivers = preview.users.filter((u) => u.recv > 0);
-  const buyers = preview.users.filter((u) => u.owe > 0);
+  const { users, platformBottles } = useMemo(
+    () => recomputePayouts(preview, included),
+    [preview, included],
+  );
+  const receivers = users.filter((u) => u.recv > 0);
+  const buyers = users.filter((u) => u.owe > 0);
+
+  // A match settles when it has no voters (closed as-is) or at least one opt-in.
+  const settleableCount = preview.matches.filter(
+    (m) => m.votes.length === 0 || (included.get(m.matchId)?.size ?? 0) > 0,
+  ).length;
 
   return (
     <div className="adm-modal" onClick={onCancel}>
@@ -406,14 +525,49 @@ function PreviewSheet({
               : pm.result === "away"
                 ? tm?.away ?? "客胜"
                 : "平局";
+          const inc = included.get(pm.matchId) ?? new Set<number>();
+          const userIds = pm.votes.map((v) => v.userId);
+          const allChecked = userIds.length > 0 && inc.size === userIds.length;
           return (
-            <div key={pm.matchId} className="adm-match">
-              <span className="nm">
-                {tm ? `${tm.home} vs ${tm.away}` : `#${pm.matchId}`}
-              </span>
-              <span className="sc">
-                {pm.homeScore ?? "-"}:{pm.awayScore ?? "-"} · {r}
-              </span>
+            <div key={pm.matchId} className="adm-mblock">
+              <div className="adm-match">
+                <span className="nm">
+                  {tm ? `${tm.home} vs ${tm.away}` : `#${pm.matchId}`}
+                </span>
+                <span className="sc">
+                  {pm.homeScore ?? "-"}:{pm.awayScore ?? "-"} · {r}
+                </span>
+              </div>
+              {pm.votes.length === 0 ? (
+                <p className="adm-skip">本场无人下注</p>
+              ) : (
+                <>
+                  <div className="adm-roster-head">
+                    <span className="cnt-sel">
+                      参与结算 {inc.size}/{userIds.length} 人
+                    </span>
+                    <button
+                      type="button"
+                      className="adm-toggle"
+                      onClick={() =>
+                        onToggleMatchAll(pm.matchId, !allChecked, userIds)
+                      }
+                    >
+                      {allChecked ? "全不选" : "全选"}
+                    </button>
+                  </div>
+                  <RosterChecklist
+                    votes={pm.votes}
+                    home={tm?.home ?? "主"}
+                    away={tm?.away ?? "客"}
+                    allowsDraw={
+                      tm?.allowsDraw ?? pm.votes.some((v) => v.pick === "draw")
+                    }
+                    isChecked={(uid) => inc.has(uid)}
+                    onToggle={(uid) => onToggleUser(pm.matchId, uid)}
+                  />
+                </>
+              )}
             </div>
           );
         })}
@@ -426,8 +580,8 @@ function PreviewSheet({
 
         <hr className="adm-divider" />
 
-        {preview.users.length === 0 ? (
-          <p className="adm-empty">本批无人下注。</p>
+        {users.length === 0 ? (
+          <p className="adm-empty">没有参与结算的人。</p>
         ) : (
           <>
             {receivers.length > 0 && (
@@ -458,7 +612,7 @@ function PreviewSheet({
             )}
             <div className="adm-pool">
               <span className="l">🏦 平台可乐池</span>
-              <span className="v">{preview.platformBottles} 瓶</span>
+              <span className="v">{platformBottles} 瓶</span>
             </div>
           </>
         )}
@@ -467,7 +621,7 @@ function PreviewSheet({
           <button
             type="button"
             className="cta"
-            disabled={busy}
+            disabled={busy || settleableCount === 0}
             onClick={onConfirm}
           >
             确定结算
@@ -477,6 +631,64 @@ function PreviewSheet({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function RosterChecklist({
+  votes,
+  home,
+  away,
+  allowsDraw: withDraw,
+  isChecked,
+  onToggle,
+}: {
+  votes: RosterVote[];
+  home: string;
+  away: string;
+  allowsDraw: boolean;
+  isChecked: (userId: number) => boolean;
+  onToggle: (userId: number) => void;
+}) {
+  const groups: { key: Pick; label: string }[] = [
+    { key: "home", label: home },
+    ...(withDraw ? [{ key: "draw" as Pick, label: "平局" }] : []),
+    { key: "away", label: away },
+  ];
+  return (
+    <div className="adm-votes">
+      {groups.map((g) => {
+        const list = votes.filter((v) => v.pick === g.key);
+        return (
+          <div key={g.key} className="vline">
+            <span className="vk">
+              {PICK_SHORT[g.key]} {g.label}
+            </span>
+            <span className="vlist">
+              {list.length === 0 ? (
+                <span className="vnone">—</span>
+              ) : (
+                list.map((v) => {
+                  const on = isChecked(v.userId);
+                  return (
+                    <label
+                      key={v.userId}
+                      className={"vchip vchip-sel" + (on ? "" : " off")}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={on}
+                        onChange={() => onToggle(v.userId)}
+                      />
+                      {v.emoji ?? "🙂"} {v.nickname} {v.stake}🥤
+                    </label>
+                  );
+                })
+              )}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

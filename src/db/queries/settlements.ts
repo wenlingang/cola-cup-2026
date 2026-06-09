@@ -5,7 +5,6 @@ import {
   bottlesToReceive,
   platformPool,
 } from "../../lib/decimalOdds";
-import { getMatchVotesDetailed } from "./votes";
 
 export type VoteLine = {
   nickname: string;
@@ -13,6 +12,19 @@ export type VoteLine = {
   pick: Pick;
   stake: number;
 };
+
+/** A settled match's per-person breakdown, sourced from the ledger so it matches
+ *  the payouts exactly — voters excluded at settlement time never appear here. */
+function settledVotesForMatch(matchId: number): VoteLine[] {
+  return db
+    .prepare(
+      `SELECT u.nickname, u.emoji, l.pick, l.stake
+       FROM ledger l JOIN users u ON u.id = l.user_id
+       WHERE l.match_id = ?
+       ORDER BY l.created_at, u.id`,
+    )
+    .all(matchId) as VoteLine[];
+}
 
 type UserNet = { user_id: number; net: number };
 
@@ -103,7 +115,7 @@ export function getSettlementDetail(id: number): SettlementDetail | null {
               COALESCE(ht.name_zh, ht.name, m.home_label) AS home,
               COALESCE(at.name_zh, at.name, m.away_label) AS away,
               ht.flag AS homeFlag, at.flag AS awayFlag,
-              (SELECT COUNT(*) FROM votes v WHERE v.match_id = m.id) AS voters
+              (SELECT COUNT(*) FROM ledger l WHERE l.match_id = m.id) AS voters
        FROM matches m
        LEFT JOIN teams ht ON ht.id = m.home_team_id
        LEFT JOIN teams at ON at.id = m.away_team_id
@@ -113,12 +125,7 @@ export function getSettlementDetail(id: number): SettlementDetail | null {
     .all(id) as Omit<SettlementDetailMatch, "votes">[];
   const matches: SettlementDetailMatch[] = matchRows.map((mm) => ({
     ...mm,
-    votes: getMatchVotesDetailed(mm.matchId).map((v) => ({
-      nickname: v.nickname,
-      emoji: v.emoji,
-      pick: v.pick,
-      stake: v.stake,
-    })),
+    votes: settledVotesForMatch(mm.matchId),
   }));
 
   const nets = userNetsForSettlement(id);

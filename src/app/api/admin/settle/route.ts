@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { getCurrentSettler } from "../../../../lib/settler";
-import { previewSettlement, settleSelected } from "../../../../lib/settlement";
+import {
+  previewSettlement,
+  settleSelected,
+  type IncludedMap,
+} from "../../../../lib/settlement";
 
 export async function POST(request: Request) {
   const settler = await getCurrentSettler();
@@ -10,6 +14,7 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => null)) as {
     matchIds?: number[];
+    included?: IncludedMap;
     commit?: boolean;
   } | null;
 
@@ -20,13 +25,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "请选择要结算的比赛" }, { status: 400 });
   }
 
+  const included =
+    body?.included && typeof body.included === "object" ? body.included : undefined;
+
   if (body?.commit) {
-    const outcome = settleSelected(matchIds, settler.id);
+    const outcome = settleSelected(matchIds, settler.id, included);
     if (!outcome.ok) {
       return NextResponse.json({ error: outcome.error }, { status: 409 });
     }
     return NextResponse.json(outcome);
   }
 
-  return NextResponse.json(previewSettlement(matchIds));
+  return NextResponse.json(previewSettlement(matchIds, included));
 }
