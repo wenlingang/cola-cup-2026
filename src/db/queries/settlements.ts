@@ -1,10 +1,5 @@
 import { db } from "../client";
 import type { Pick } from "../../lib/stage";
-import {
-  bottlesToBuy,
-  bottlesToReceive,
-  platformPool,
-} from "../../lib/decimalOdds";
 
 export type VoteLine = {
   nickname: string;
@@ -62,7 +57,7 @@ export function getSettlements(): SettlementListRow[] {
     return {
       ...s,
       people: nets.length,
-      bottles: nets.reduce((sum, n) => sum + bottlesToReceive(n.net), 0),
+      bottles: nets.reduce((sum, n) => sum + Math.max(0, n.net), 0),
     };
   });
 }
@@ -72,8 +67,6 @@ export type SettlementDetailUser = {
   nickname: string;
   emoji: string | null;
   net: number;
-  owe: number;
-  recv: number;
 };
 
 export type SettlementDetailMatch = {
@@ -96,7 +89,6 @@ export type SettlementDetail = {
   match_count: number;
   matches: SettlementDetailMatch[];
   users: SettlementDetailUser[];
-  platformBottles: number;
 };
 
 /** Full content of one settlement record: its matches + each person's buy/receive. */
@@ -152,8 +144,6 @@ export function getSettlementDetail(id: number): SettlementDetail | null {
         nickname: u?.nickname ?? "?",
         emoji: u?.emoji ?? null,
         net: n.net,
-        owe: bottlesToBuy(n.net),
-        recv: bottlesToReceive(n.net),
       };
     })
     .sort((a, b) => b.net - a.net);
@@ -164,16 +154,5 @@ export function getSettlementDetail(id: number): SettlementDetail | null {
     match_count: s.match_count,
     matches,
     users,
-    platformBottles: platformPool(nets.map((n) => n.net)),
   };
-}
-
-/** Accumulated house pool = sum of every settlement's per-batch platform pool. */
-export function getPlatformPoolTotal(): number {
-  const ids = db.prepare("SELECT id FROM settlements").all() as { id: number }[];
-  let total = 0;
-  for (const { id } of ids) {
-    total += platformPool(userNetsForSettlement(id).map((n) => n.net));
-  }
-  return total;
 }

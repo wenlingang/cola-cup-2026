@@ -1,10 +1,19 @@
-/** Betting limits, in bottles of coke. Single source of truth — edit here to
- *  change the quick-pick presets and the allowed range (preset buttons + a free
- *  input up to MAX_STAKE). Used by the vote UI and the server-side validation. */
-export const STAKE_PRESETS = [1, 3, 5] as const;
-export const MIN_STAKE = 1;
-export const MAX_STAKE = 10;
+import type { Stage } from "./stage";
 
-export function isValidStake(n: number): boolean {
-  return Number.isInteger(n) && n >= MIN_STAKE && n <= MAX_STAKE;
+/** Fixed stake per stage, in bottles of coke. Group is cheap (≈28 group matches
+ *  a week), stakes rise through the knockout rounds. Single source of truth —
+ *  edit here to change. Stake is server-determined by stage; the client only
+ *  picks a side. */
+const STAKE_BY_STAGE: Record<Stage, number> = {
+  group: 1,
+  r32: 2,
+  r16: 2,
+  qf: 2,
+  sf: 5,
+  third: 5,
+  final: 5,
+};
+
+export function stakeForStage(stage: string): number {
+  return STAKE_BY_STAGE[stage as Stage] ?? 1;
 }

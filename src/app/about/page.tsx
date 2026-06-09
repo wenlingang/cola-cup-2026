@@ -80,7 +80,7 @@ export default function AboutPage() {
           <ol className="rules">
             <li>
               <span className="t">
-                <b>赛前预测</b>，选主胜 / 平 / 客胜，并约定彩头瓶数。<small>开赛前可随时改预测。</small>
+                <b>赛前预测</b>，选主胜 / 平 / 客胜。<b>每场固定下注</b>，按阶段递增：小组赛 1 瓶、32/16/8 强 2 瓶、半决赛及之后 5 瓶。<small>开赛前可随时改预测。</small>
               </span>
             </li>
             <li>
@@ -90,17 +90,17 @@ export default function AboutPage() {
             </li>
             <li>
               <span className="t">
-                <b>赛后结算</b>：猜中按赔率赢瓶，猜错给大家买饮料。
+                <b>赛后结算</b>：猜中按赔率赢瓶，猜错按注额给大家买饮料。赢瓶以<b>小数累计</b>记在你账上。
               </span>
             </li>
             <li>
               <span className="t">
-                <b>取整规则</b>：赢家应收<b>向下取整</b>、输家应买<b>向上取整</b>。<small>例：应收 2.6 瓶 → 收 2 瓶；应买 1.2 瓶 → 买 2 瓶。</small>
+                <b>攒够才领</b>：账上<b>攒满 1 瓶即可领一瓶可乐</b>，零头继续累计。<small>没有平台抽水，可乐只在猜对和猜错的人之间流转。</small>
               </span>
             </li>
             <li>
               <span className="t">
-                <b>共享池</b>：取整产生的零头归平台，统一放进<b>共享可乐池</b>，大家都能免费喝。
+                <b>想多押？</b>用多个账号参与即可，<b>一人多号不限制</b>。
               </span>
             </li>
           </ol>

@@ -10,11 +10,6 @@ import type {
   IncludedMap,
 } from "../../lib/settlement";
 import { deltasFromVotes } from "../../lib/pariMutuel";
-import {
-  bottlesToBuy,
-  bottlesToReceive,
-  platformPool,
-} from "../../lib/decimalOdds";
 import type { SettlementDetail } from "../../db/queries/settlements";
 
 export type TodoMatch = {
@@ -437,17 +432,15 @@ type PreviewPayUser = {
   nickname: string;
   emoji: string | null;
   net: number;
-  owe: number;
-  recv: number;
 };
 
-/** Recompute each person's net buy/receive from the current per-match opt-in.
- *  Mirrors the backend's buildPreviewUsers + platformPool exactly (same pure
- *  pari-mutuel + rounding functions), so the preview matches what gets committed. */
+/** Recompute each person's net from the current per-match opt-in. Mirrors the
+ *  backend's buildPreviewUsers exactly (same pure pari-mutuel), so the preview
+ *  matches what gets committed to the ledger. */
 function recomputePayouts(
   preview: SettlementPreview,
   included: Map<number, Set<number>>,
-): { users: PreviewPayUser[]; platformBottles: number } {
+): PreviewPayUser[] {
   const netByUser = new Map<number, number>();
   const info = new Map<number, { nickname: string; emoji: string | null }>();
 
@@ -464,18 +457,14 @@ function recomputePayouts(
     }
   }
 
-  const users = [...netByUser.entries()]
+  return [...netByUser.entries()]
     .map(([userId, net]) => ({
       userId,
       nickname: info.get(userId)?.nickname ?? "?",
       emoji: info.get(userId)?.emoji ?? null,
       net,
-      owe: bottlesToBuy(net),
-      recv: bottlesToReceive(net),
     }))
     .sort((a, b) => b.net - a.net);
-
-  return { users, platformBottles: platformPool([...netByUser.values()]) };
 }
 
 function PreviewSheet({
@@ -497,12 +486,12 @@ function PreviewSheet({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
-  const { users, platformBottles } = useMemo(
+  const users = useMemo(
     () => recomputePayouts(preview, included),
     [preview, included],
   );
-  const receivers = users.filter((u) => u.recv > 0);
-  const buyers = users.filter((u) => u.owe > 0);
+  const winners = users.filter((u) => u.net > 0);
+  const losers = users.filter((u) => u.net < 0);
 
   // A match settles when it has no voters (closed as-is) or at least one opt-in.
   const settleableCount = preview.matches.filter(
@@ -584,36 +573,32 @@ function PreviewSheet({
           <p className="adm-empty">没有参与结算的人。</p>
         ) : (
           <>
-            {receivers.length > 0 && (
+            {winners.length > 0 && (
               <div className="adm-grp">
-                <p className="lbl">应发放（赢家收）</p>
-                {receivers.map((u) => (
+                <p className="lbl">本批赢家（账上 +）</p>
+                {winners.map((u) => (
                   <div key={u.userId} className="adm-pay">
                     <span className="who">
                       {u.emoji ?? "🙂"} {u.nickname}
                     </span>
-                    <span className="amt recv">收 {u.recv} 瓶</span>
+                    <span className="amt recv">{formatBottles(u.net)} 瓶</span>
                   </div>
                 ))}
               </div>
             )}
-            {buyers.length > 0 && (
+            {losers.length > 0 && (
               <div className="adm-grp">
-                <p className="lbl">应收取（输家买）</p>
-                {buyers.map((u) => (
+                <p className="lbl">本批输家（账上 −）</p>
+                {losers.map((u) => (
                   <div key={u.userId} className="adm-pay">
                     <span className="who">
                       {u.emoji ?? "🙂"} {u.nickname}
                     </span>
-                    <span className="amt owe">买 {u.owe} 瓶</span>
+                    <span className="amt owe">{formatBottles(u.net)} 瓶</span>
                   </div>
                 ))}
               </div>
             )}
-            <div className="adm-pool">
-              <span className="l">🏦 平台可乐池</span>
-              <span className="v">{platformBottles} 瓶</span>
-            </div>
           </>
         )}
 
@@ -708,7 +693,7 @@ function RecordsList({ records }: { records: SettlementDetail[] }) {
 
 function RecordCard({ rec }: { rec: SettlementDetail }) {
   const [open, setOpen] = useState(false);
-  const bottles = rec.users.reduce((sum, u) => sum + u.recv, 0);
+  const bottles = rec.users.reduce((sum, u) => sum + Math.max(0, u.net), 0);
 
   return (
     <div className="adm-rec">
@@ -718,7 +703,7 @@ function RecordCard({ rec }: { rec: SettlementDetail }) {
           <span className="when">{fmtTime(rec.created_at)}</span>
         </span>
         <span className="meta">
-          {rec.match_count} 场 · {rec.users.length} 人 · {bottles} 瓶{" "}
+          {rec.match_count} 场 · {rec.users.length} 人 · {bottles.toFixed(1)} 瓶{" "}
           {open ? "▲" : "▼"}
         </span>
       </button>
@@ -758,26 +743,15 @@ function RecordCard({ rec }: { rec: SettlementDetail }) {
                   {u.emoji ?? "🙂"} {u.nickname}
                 </span>
                 <span className="amt">
-                  <span className="raw">{formatBottles(u.net)}</span>
-                  {" → "}
                   <span
-                    className={u.recv > 0 ? "recv" : u.owe > 0 ? "owe" : "zero"}
+                    className={u.net > 0 ? "recv" : u.net < 0 ? "owe" : "zero"}
                   >
-                    {u.recv > 0
-                      ? `收 ${u.recv} 瓶`
-                      : u.owe > 0
-                        ? `买 ${u.owe} 瓶`
-                        : "持平"}
+                    {formatBottles(u.net)} 瓶
                   </span>
                 </span>
               </div>
             ))
           )}
-
-          <div className="adm-pool">
-            <span className="l">🏦 平台可乐池</span>
-            <span className="v">{rec.platformBottles} 瓶</span>
-          </div>
         </div>
       )}
     </div>

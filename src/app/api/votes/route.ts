@@ -4,7 +4,7 @@ import { getMatch } from "../../../db/queries/matches";
 import { upsertVote, getUserVote } from "../../../db/queries/votes";
 import { deriveStatus, isVotable } from "../../../lib/matchState";
 import { validPicks, type Pick } from "../../../lib/stage";
-import { MIN_STAKE, MAX_STAKE, isValidStake } from "../../../lib/betting";
+import { stakeForStage } from "../../../lib/betting";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -15,12 +15,10 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     matchId?: number;
     pick?: Pick;
-    stake?: number;
   } | null;
 
   const matchId = Number(body?.matchId);
   const pick = body?.pick;
-  const stake = Number(body?.stake);
 
   const match = Number.isFinite(matchId) ? getMatch(matchId) : null;
   if (!match) {
@@ -34,12 +32,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!isValidStake(stake)) {
-    return NextResponse.json(
-      { error: `下注瓶数需为 ${MIN_STAKE}–${MAX_STAKE} 的整数` },
-      { status: 400 },
-    );
-  }
+  const stake = stakeForStage(match.stage);
 
   const status = deriveStatus({
     kickoffAt: match.kickoff_at,

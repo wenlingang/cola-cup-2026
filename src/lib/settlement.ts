@@ -3,7 +3,6 @@ import type { OddsRow } from "../db/queries/matches";
 import { getVoteTally, getMatchVotesDetailed } from "../db/queries/votes";
 import { computeVoteOdds } from "./voteOdds";
 import { deltasFromVotes } from "./pariMutuel";
-import { bottlesToBuy, bottlesToReceive, platformPool } from "./decimalOdds";
 import { allowsDraw, isKnockout, type Pick } from "./stage";
 import { VOTE_CLOSES_MS_BEFORE } from "./matchState";
 
@@ -222,8 +221,6 @@ export type PreviewUser = {
   nickname: string;
   emoji: string | null;
   net: number;
-  owe: number;
-  recv: number;
 };
 
 export type SettlementPreview = {
@@ -232,7 +229,6 @@ export type SettlementPreview = {
   matches: PreviewMatch[];
   skipped: { matchId: number; reason: string }[];
   users: PreviewUser[];
-  platformBottles: number;
 };
 
 function toRosterVotes(detailed: ReturnType<typeof getMatchVotesDetailed>): RosterVote[] {
@@ -286,14 +282,12 @@ export function previewSettlement(
   }
 
   const users = buildPreviewUsers(netByUser);
-  const platformBottles = platformPool([...netByUser.values()]);
   return {
     ok: matches.length > 0,
     error: matches.length > 0 ? undefined : skipped[0]?.reason ?? "没有可结算的比赛",
     matches,
     skipped,
     users,
-    platformBottles,
   };
 }
 
@@ -315,8 +309,6 @@ function buildPreviewUsers(netByUser: Map<number, number>): PreviewUser[] {
         nickname: u?.nickname ?? "?",
         emoji: u?.emoji ?? null,
         net,
-        owe: bottlesToBuy(net),
-        recv: bottlesToReceive(net),
       };
     })
     .sort((a, b) => b.net - a.net);

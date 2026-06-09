@@ -1,5 +1,4 @@
 import { getLeaderboard } from "../../db/queries/ledger";
-import { getPlatformPoolTotal } from "../../db/queries/settlements";
 import { getCurrentUser } from "../../lib/identity";
 import { formatBottles } from "../../lib/format";
 
@@ -8,7 +7,6 @@ export const dynamic = "force-dynamic";
 export default async function LeaderboardPage() {
   const board = getLeaderboard();
   const me = await getCurrentUser();
-  const pool = getPlatformPoolTotal();
 
   return (
     <section>
@@ -17,16 +15,6 @@ export default async function LeaderboardPage() {
         <div className="sub">按累计净瓶数排序</div>
       </div>
       <hr className="rule ink" />
-
-      {pool > 0 && (
-        <>
-          <div className="pool">
-            <span className="l">🏦 平台可乐池</span>
-            <span className="v">{pool} 瓶</span>
-          </div>
-          <hr className="rule" />
-        </>
-      )}
 
       {board.length === 0 ? (
         <p style={{ padding: "40px 0", textAlign: "center", color: "var(--low)", fontSize: 13 }}>

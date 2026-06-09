@@ -15,6 +15,7 @@ import {
 import { getCurrentUser } from "../../../lib/identity";
 import { deriveStatus, isVotable } from "../../../lib/matchState";
 import { allowsDraw, validPicks, stageLabel, type Pick } from "../../../lib/stage";
+import { stakeForStage } from "../../../lib/betting";
 import { computeVoteOdds } from "../../../lib/voteOdds";
 import { formatKickoff } from "../../../lib/format";
 import { StatusBadge } from "../../components/StatusBadge";
@@ -162,6 +163,7 @@ export default async function MatchPage({
             hasIdentity={!!user}
             initialPick={(userVote?.pick as Pick) ?? null}
             initialStake={userVote?.stake ?? null}
+            stake={stakeForStage(match.stage)}
             nextMatchId={nextMatchId}
           />
           <VotesList

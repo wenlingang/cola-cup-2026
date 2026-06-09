@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { Pick } from "../../lib/stage";
-import { STAKE_PRESETS, MIN_STAKE, MAX_STAKE } from "../../lib/betting";
 
 export type VotePanelProps = {
   matchId: number;
@@ -14,6 +13,7 @@ export type VotePanelProps = {
   hasIdentity: boolean;
   initialPick: Pick | null;
   initialStake: number | null;
+  stake: number;
   nextMatchId: number | null;
 };
 
@@ -25,18 +25,16 @@ export function VotePanel({
   hasIdentity,
   initialPick,
   initialStake,
+  stake,
   nextMatchId,
 }: VotePanelProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [pick, setPick] = useState<Pick | null>(initialPick);
-  const [stake, setStake] = useState<number>(initialStake ?? 1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [confirmed, setConfirmed] = useState<{ pick: Pick; stake: number } | null>(
-    initialPick ? { pick: initialPick, stake: initialStake ?? 1 } : null,
-  );
+  const [confirmed, setConfirmed] = useState<Pick | null>(initialPick);
 
   function pickLabel(p: Pick): string {
     return picks.find((x) => x.key === p)?.label ?? p;
@@ -91,7 +89,7 @@ export function VotePanel({
     const res = await fetch("/api/votes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ matchId, pick, stake }),
+      body: JSON.stringify({ matchId, pick }),
     });
     setSaving(false);
     if (!res.ok) {
@@ -100,7 +98,7 @@ export function VotePanel({
       return;
     }
     setSaved(true);
-    setConfirmed({ pick, stake });
+    setConfirmed(pick);
     startTransition(() => router.refresh());
     setTimeout(() => setSaved(false), 1800);
   }
@@ -139,59 +137,28 @@ export function VotePanel({
           padding: "18px 0 0",
         }}
       >
-        猜错请客几瓶？（预设或自定义，最多 {MAX_STAKE}）
+        本场固定下注 <b>{stake} 瓶</b> · 猜错就请这几瓶
       </p>
-
-      <div className="stakes">
-        {STAKE_PRESETS.map((n) => (
-          <button
-            key={n}
-            type="button"
-            className={"s" + (stake === n ? " sel" : "")}
-            onClick={() => setStake(n)}
-          >
-            🥤 {n}
-          </button>
-        ))}
-        <input
-          type="number"
-          inputMode="numeric"
-          min={MIN_STAKE}
-          max={MAX_STAKE}
-          value={stake}
-          onChange={(e) => {
-            const n = Math.floor(Number(e.target.value));
-            if (!Number.isFinite(n)) return;
-            setStake(Math.max(MIN_STAKE, Math.min(MAX_STAKE, n)));
-          }}
-          aria-label={`自定义瓶数（最多 ${MAX_STAKE}）`}
-          className={
-            "s sin" +
-            ((STAKE_PRESETS as readonly number[]).includes(stake) ? "" : " sel")
-          }
-        />
-      </div>
 
       {potential != null && pick ? (
         <p className="pot">
-          猜中约赢 <b>+{potential.toFixed(2)} 瓶</b> · 按当前预测赔率
+          猜中约赢 <b>+{potential.toFixed(1)} 瓶</b> · 按当前预测赔率
           <br />
           <span style={{ color: "var(--low)", fontSize: 12 }}>
-            实发按整瓶向下取整，约 {Math.floor(potential)} 瓶
-            {potential < 1 ? "（不足 1 瓶，可能为 0）" : ""}
+            零头会累计，攒满 1 瓶即可领
           </span>
         </p>
       ) : (
-        <p className="pot">选个看好的并下注</p>
+        <p className="pot">选个看好的</p>
       )}
 
       {confirmed && (
         <div className={"vp-status" + (saved ? " just" : "")}>
           <span className="vp-status-ic">✅</span>
           <span className="vp-status-tx">
-            当前预测 <b>{pickLabel(confirmed.pick)}</b> · {confirmed.stake} 瓶
+            当前预测 <b>{pickLabel(confirmed)}</b> · {stake} 瓶
           </span>
-          {(confirmed.pick !== pick || confirmed.stake !== stake) && (
+          {confirmed !== pick && (
             <span className="vp-status-dirty">改动待保存</span>
           )}
         </div>
