@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { getUserLedger, getUserNet } from "../../db/queries/ledger";
+import { getUserRedemptions } from "../../db/queries/redemptions";
 import { getCurrentUser } from "../../lib/identity";
 import { formatBottles } from "../../lib/format";
 import { PICK_LABELS, stageLabel, type Pick } from "../../lib/stage";
+import { getDrink } from "../../lib/drinks";
+import { RedeemPanel } from "../components/RedeemPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +37,11 @@ export default async function MePage() {
   }
 
   const ledger = getUserLedger(user.id);
-  const netRaw = getUserNet(user.id);
+  const balance = getUserNet(user.id);
+  const redemptions = getUserRedemptions(user.id);
   const wins = ledger.filter((l) => l.won).length;
   const hugeClass =
-    netRaw > 0 ? "huge" : netRaw < 0 ? "huge neg" : "huge zero";
+    balance > 0 ? "huge" : balance < 0 ? "huge neg" : "huge zero";
 
   return (
     <section>
@@ -53,13 +57,41 @@ export default async function MePage() {
           </span>
         </div>
         <hr className="rule ink" style={{ marginTop: 18 }} />
-        <div className="netlbl">累计净瓶数</div>
+        <div className="netlbl">可用额度</div>
         <div className={hugeClass}>
-          {formatBottles(netRaw)}
-          <small> 瓶</small>
+          {formatBottles(balance)}
+          <small> 额度</small>
         </div>
-        <p className="note">按同事预测赔率结算，每场比赛的输赢见下。</p>
+        <p className="note">额度 = 累计赢得 − 已兑换。1 额度可兑 1 瓶可乐。</p>
       </div>
+
+      <div className="ledh disp">兑换饮料</div>
+      <hr className="rule" />
+      <RedeemPanel balance={balance} />
+
+      {redemptions.length > 0 && (
+        <>
+          <div className="ledh disp">兑换记录</div>
+          <hr className="rule" />
+          {redemptions.map((r) => {
+            const drink = getDrink(r.drink);
+            return (
+              <div key={r.id}>
+                <div className="led">
+                  <span className="info">
+                    <div className="t">
+                      {drink?.emoji ?? "🥤"} {drink?.name ?? r.drink} × {r.qty}
+                    </div>
+                    <div className="m">兑换 · {r.unit_cost} 额度 / 瓶</div>
+                  </span>
+                  <span className="d neg">-{r.cost.toFixed(1)}</span>
+                </div>
+                <hr className="rule" />
+              </div>
+            );
+          })}
+        </>
+      )}
 
       <div className="ledh disp">结算明细</div>
       <hr className="rule" />

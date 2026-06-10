@@ -875,46 +875,24 @@ main {
   color: var(--low);
   padding: 12px 0 0;
 }
-.vp-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 11px 13px;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--win) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--win) 28%, transparent);
-  font-size: 13.5px;
-  color: var(--hi);
+.vp-cancel-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--red);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in srgb, var(--red) 45%, transparent);
+  transition: color 0.15s ease;
 }
-.vp-status .vp-status-ic {
-  font-size: 15px;
-  line-height: 1;
+.vp-cancel-link:hover {
+  filter: brightness(1.12);
 }
-.vp-status .vp-status-tx b {
-  color: var(--win);
-  font-family: var(--num);
-}
-.vp-status .vp-status-dirty {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--amber);
-  white-space: nowrap;
-}
-.vp-status.just {
-  animation: vpStatusPulse 0.9s ease;
-}
-@keyframes vpStatusPulse {
-  0% {
-    transform: scale(0.98);
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--win) 45%, transparent);
-  }
-  60% {
-    box-shadow: 0 0 0 7px color-mix(in srgb, var(--win) 0%, transparent);
-  }
-  100% {
-    transform: scale(1);
-  }
+.vp-cancel-link:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .vp-foot {
   display: flex;
@@ -1295,7 +1273,7 @@ main {
 /* drinks grid */
 .drinks {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   border-top: 1px solid var(--border);
   border-left: 1px solid var(--border);
 }
@@ -1324,6 +1302,87 @@ main {
 }
 .drink.unit .note {
   color: var(--red-300);
+}
+
+/* drink redemption (me page) */
+.redeem {
+  display: flex;
+  flex-direction: column;
+}
+.rdrink {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 2px;
+  border-bottom: 1px solid var(--border);
+}
+.rdrink .em {
+  font-size: 26px;
+  line-height: 1;
+  width: 34px;
+  text-align: center;
+}
+.rdrink .meta {
+  flex: 1;
+  min-width: 0;
+}
+.rdrink .meta .dn {
+  font-family: var(--disp);
+  font-weight: 800;
+  font-size: 16px;
+}
+.rdrink .meta .price {
+  font-size: 12px;
+  color: var(--low);
+  margin-top: 2px;
+}
+.rdrink .stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.rdrink .stepper button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  background: transparent;
+  border-radius: 6px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--hi);
+}
+.rdrink .stepper button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.rdrink .stepper b {
+  min-width: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.rdrink .rbtn {
+  border: 1px solid var(--red);
+  color: var(--red);
+  background: transparent;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 96px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.rdrink .rbtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.redeem-hint {
+  font-size: 12px;
+  color: var(--low);
+  margin: 12px 0 0;
 }
 
 /* numbered rules */
@@ -1585,6 +1644,9 @@ main {
   }
   .detail-vs {
     gap: 8px;
+  }
+  .drinks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   /* pin the current day's heading under the sticky site header while scrolling */
   .daylabel {

@@ -32,6 +32,7 @@ export function VotePanel({
   const [, startTransition] = useTransition();
   const [pick, setPick] = useState<Pick | null>(initialPick);
   const [saving, setSaving] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [confirmed, setConfirmed] = useState<Pick | null>(initialPick);
@@ -103,13 +104,36 @@ export function VotePanel({
     setTimeout(() => setSaved(false), 1800);
   }
 
+  async function cancel() {
+    setError(null);
+    setCanceling(true);
+    const res = await fetch("/api/votes", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ matchId }),
+    });
+    setCanceling(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "取消失败");
+      return;
+    }
+    setPick(null);
+    setConfirmed(null);
+    setSaved(false);
+    startTransition(() => router.refresh());
+  }
+
+  const isUnchanged = pick != null && pick === confirmed;
   const ctaLabel = saving
     ? "预测中…"
     : saved
       ? "✅ 已记录"
-      : pick
-        ? `🥤 提交预测 · ${pickLabel(pick)} · ${stake} 瓶`
-        : "🥤 选个看好的";
+      : isUnchanged
+        ? `✅ 当前已预测 ${pickLabel(pick)}`
+        : pick
+          ? `🥤 提交预测 · ${pickLabel(pick)} · ${stake} 瓶`
+          : "🥤 选个看好的";
 
   return (
     <div className="vp">
@@ -152,24 +176,12 @@ export function VotePanel({
         <p className="pot">选个看好的</p>
       )}
 
-      {confirmed && (
-        <div className={"vp-status" + (saved ? " just" : "")}>
-          <span className="vp-status-ic">✅</span>
-          <span className="vp-status-tx">
-            当前预测 <b>{pickLabel(confirmed)}</b> · {stake} 瓶
-          </span>
-          {confirmed !== pick && (
-            <span className="vp-status-dirty">改动待保存</span>
-          )}
-        </div>
-      )}
-
       {error && <p className="formerror">{error}</p>}
 
       <button
         type="button"
         className="cta"
-        disabled={!pick || saving}
+        disabled={!pick || isUnchanged || saving || canceling}
         onClick={submit}
       >
         {ctaLabel}
@@ -191,7 +203,21 @@ export function VotePanel({
             <span className="bk-arrow">←</span> 返回赛程
           </Link>
         )}
-        <span className="vp-hint">开赛前可随时改预测</span>
+        <span className="vp-hint">
+          开赛前可随时改或
+          {confirmed ? (
+            <button
+              type="button"
+              className="vp-cancel-link"
+              disabled={saving || canceling}
+              onClick={cancel}
+            >
+              {canceling ? "取消中…" : "取消预测"}
+            </button>
+          ) : (
+            "取消预测"
+          )}
+        </span>
       </div>
     </div>
   );

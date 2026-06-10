@@ -6,6 +6,7 @@ export type User = {
   avatar_url: string | null;
   emoji: string | null;
   created_at: number;
+  deleted_at: number | null;
 };
 
 export type Account = {

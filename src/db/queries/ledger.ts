@@ -11,16 +11,18 @@ export type LeaderboardEntry = {
   wins: number;
 };
 
+/** Available balance = settled net (SUM delta) − credits spent on redemptions.
+ *  This is the "钱包榜" figure: redeeming a drink lowers your standing. */
 export function getLeaderboard(): LeaderboardEntry[] {
   return db
     .prepare(
       `SELECT u.id, u.avatar_url, u.emoji, u.nickname,
-              COALESCE(SUM(l.delta), 0) AS net_raw,
-              COUNT(l.id) AS bets,
-              COALESCE(SUM(l.won), 0) AS wins
+              COALESCE((SELECT SUM(delta) FROM ledger WHERE user_id = u.id), 0)
+            - COALESCE((SELECT SUM(cost) FROM redemptions WHERE user_id = u.id), 0) AS net_raw,
+              (SELECT COUNT(*) FROM ledger WHERE user_id = u.id) AS bets,
+              COALESCE((SELECT SUM(won) FROM ledger WHERE user_id = u.id), 0) AS wins
        FROM users u
-       LEFT JOIN ledger l ON l.user_id = u.id
-       GROUP BY u.id
+       WHERE u.deleted_at IS NULL
        ORDER BY net_raw DESC, bets DESC, u.created_at`,
     )
     .all() as LeaderboardEntry[];
@@ -61,11 +63,13 @@ export function getUserLedger(userId: number): LedgerEntry[] {
     .all(userId) as LedgerEntry[];
 }
 
+/** Available balance = settled net − credits spent on redemptions. */
 export function getUserNet(userId: number): number {
   const row = db
     .prepare(
-      "SELECT COALESCE(SUM(delta), 0) AS net FROM ledger WHERE user_id = ?",
+      `SELECT COALESCE((SELECT SUM(delta) FROM ledger WHERE user_id = @u), 0)
+            - COALESCE((SELECT SUM(cost) FROM redemptions WHERE user_id = @u), 0) AS net`,
     )
-    .get(userId) as { net: number };
+    .get({ u: userId }) as { net: number };
   return row.net;
 }

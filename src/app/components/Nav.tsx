@@ -35,7 +35,7 @@ export function Nav({ user }: { user: NavUser }) {
         <div className="shell">
           <div className="bar">
             <Link className="wm" href="/">
-              <span className="wm-pre">The World of CUP</span>
+              <span className="wm-pre">The Cola of Cup</span>
               <span className="yr">2026</span>
             </Link>
             <nav className="nav">

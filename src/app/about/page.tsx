@@ -19,58 +19,28 @@ export default function AboutPage() {
         </p>
 
         <div className="sec">
-          <h2 className="disp">「可乐」只是计价单位</h2>
-          <p className="sub">1 瓶 = 任意一瓶等价饮料，按喜好兑换</p>
+          <h2 className="disp">「额度」按饮料兑换</h2>
+          <p className="sub">1 额度 = 1 瓶可乐；其他饮料按下方比例兑换</p>
           <div className="drinks">
             <div className="drink unit">
               <div className="em">🥤</div>
-              <div className="dn">可口可乐</div>
-              <div className="note">默认计价单位</div>
+              <div className="dn">可乐</div>
+              <div className="note">1 额度 / 瓶</div>
             </div>
             <div className="drink">
-              <div className="em">🧊</div>
-              <div className="dn">雪碧</div>
-              <div className="note">1 : 1 等价</div>
+              <div className="em">🧋</div>
+              <div className="dn">各种茶</div>
+              <div className="note">1.5 额度 / 瓶</div>
             </div>
             <div className="drink">
-              <div className="em">🍊</div>
-              <div className="dn">芬达</div>
-              <div className="note">1 : 1 等价</div>
-            </div>
-            <div className="drink">
-              <div className="em">💧</div>
-              <div className="dn">脉动</div>
-              <div className="note">1 : 1 等价</div>
+              <div className="em">👽</div>
+              <div className="dn">外星人</div>
+              <div className="note">1.5 额度 / 瓶</div>
             </div>
             <div className="drink">
               <div className="em">🐂</div>
               <div className="dn">红牛</div>
-              <div className="note">1 : 1 等价</div>
-            </div>
-            <div className="drink">
-              <div className="em">⚡</div>
-              <div className="dn">电解质水</div>
-              <div className="note">1 : 1 等价</div>
-            </div>
-            <div className="drink">
-              <div className="em">🧋</div>
-              <div className="dn">冰红茶</div>
-              <div className="note">1 : 1 等价</div>
-            </div>
-            <div className="drink">
-              <div className="em">🍵</div>
-              <div className="dn">绿茶</div>
-              <div className="note">1 : 1 等价</div>
-            </div>
-            <div className="drink">
-              <div className="em">🫧</div>
-              <div className="dn">苏打水</div>
-              <div className="note">1 : 1 等价</div>
-            </div>
-            <div className="drink">
-              <div className="em">🍺</div>
-              <div className="dn">啤酒</div>
-              <div className="note">1 : 1 · 仅限下班后</div>
+              <div className="note">2.5 额度 / 瓶</div>
             </div>
           </div>
         </div>
@@ -80,7 +50,7 @@ export default function AboutPage() {
           <ol className="rules">
             <li>
               <span className="t">
-                <b>赛前预测</b>，选主胜 / 平 / 客胜。<b>每场固定下注</b>，按阶段递增：小组赛 1 瓶、32/16/8 强 2 瓶、半决赛及之后 5 瓶。<small>开赛前可随时改预测。</small>
+                <b>赛前预测</b>，选主胜 / 平 / 客胜。<b>每场固定下注</b>，按阶段递增：小组赛 1 瓶、32/16/8 强 2 瓶、半决赛及之后 5 瓶。<small>开赛前可随时改或取消预测。</small>
               </span>
             </li>
             <li>
@@ -95,7 +65,7 @@ export default function AboutPage() {
             </li>
             <li>
               <span className="t">
-                <b>攒够才领</b>：账上<b>攒满 1 瓶即可领一瓶可乐</b>，零头继续累计。<small>没有平台抽水，可乐只在猜对和猜错的人之间流转。</small>
+                <b>额度兑换</b>：去「我的」页面用额度<b>兑换饮料</b> —— 可乐 1、各种茶/外星人 1.5、红牛 2.5 额度一瓶，兑换后自动扣额度。<small>没有平台抽水，额度只在猜对和猜错的人之间流转。</small>
               </span>
             </li>
             <li>

@@ -12,7 +12,7 @@ export default async function LeaderboardPage() {
     <section>
       <div className="lbh">
         <h1 className="disp">可乐榜 🏆</h1>
-        <div className="sub">按累计净瓶数排序</div>
+        <div className="sub">按可用额度排序（已扣兑换）</div>
       </div>
       <hr className="rule ink" />
 

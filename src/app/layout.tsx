@@ -36,7 +36,7 @@ const pacifico = Pacifico({
 });
 
 export const metadata: Metadata = {
-  title: "CUP · 2026 世界杯可乐竞猜",
+  title: "The Cola of Cup · 2026 世界杯可乐竞猜",
   description: "赛前预测看好谁，赛后按同事预测赔率结算。猜错了，按净瓶数给同事买饮料 🥤",
 };
 

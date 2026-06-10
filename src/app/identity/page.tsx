@@ -2,6 +2,7 @@ import { getCurrentUser } from "../../lib/identity";
 import { getAccountsByUserId } from "../../db/queries/users";
 import { signIn, signOut } from "../../auth";
 import { ProfileForm } from "../components/ProfileForm";
+import { SignInButton } from "../components/SignInButton";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,7 @@ export default async function IdentityPage() {
         <h1 className="disp">登录<br/><em>参与竞猜</em> 🥤</h1>
         <p className="lead">用 X（Twitter）账号登录，自动带入头像和昵称，登录后可改昵称。</p>
         <form action={signInAction} style={{ paddingTop: 32 }}>
-          <button type="submit" className="cta">𝕏 用 Twitter 登录</button>
+          <SignInButton />
         </form>
       </section>
     );
