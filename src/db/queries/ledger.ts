@@ -6,24 +6,26 @@ export type LeaderboardEntry = {
   avatar_url: string | null;
   emoji: string | null;
   nickname: string;
-  net_raw: number;
+  total: number;
+  redeemed: number;
   bets: number;
   wins: number;
 };
 
-/** Available balance = settled net (SUM delta) − credits spent on redemptions.
- *  This is the "钱包榜" figure: redeeming a drink lowers your standing. */
+/** Ranks by total score (SUM delta) — pure betting performance, redemptions
+ *  excluded. `redeemed` (credits spent on drinks) is reported alongside but
+ *  only feeds final settlement; redeeming a drink no longer lowers your rank. */
 export function getLeaderboard(): LeaderboardEntry[] {
   return db
     .prepare(
       `SELECT u.id, u.avatar_url, u.emoji, u.nickname,
-              COALESCE((SELECT SUM(delta) FROM ledger WHERE user_id = u.id), 0)
-            - COALESCE((SELECT SUM(cost) FROM redemptions WHERE user_id = u.id), 0) AS net_raw,
+              COALESCE((SELECT SUM(delta) FROM ledger WHERE user_id = u.id), 0) AS total,
+              COALESCE((SELECT SUM(cost) FROM redemptions WHERE user_id = u.id), 0) AS redeemed,
               (SELECT COUNT(*) FROM ledger WHERE user_id = u.id) AS bets,
               COALESCE((SELECT SUM(won) FROM ledger WHERE user_id = u.id), 0) AS wins
        FROM users u
        WHERE u.deleted_at IS NULL
-       ORDER BY net_raw DESC, bets DESC, u.created_at`,
+       ORDER BY total DESC, bets DESC, u.created_at`,
     )
     .all() as LeaderboardEntry[];
 }

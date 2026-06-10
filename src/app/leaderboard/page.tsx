@@ -12,7 +12,7 @@ export default async function LeaderboardPage() {
     <section>
       <div className="lbh">
         <h1 className="disp">可乐榜 🏆</h1>
-        <div className="sub">按可用额度排序（已扣兑换）</div>
+        <div className="sub">按总分排序（兑换不影响排名）</div>
       </div>
       <hr className="rule ink" />
 
@@ -24,12 +24,14 @@ export default async function LeaderboardPage() {
         board.map((entry, i) => {
           const isMe = me?.id === entry.id;
           const isLeader = i === 0 && entry.bets > 0;
-          const balanceClass =
-            entry.net_raw > 0 ? "b pos" : entry.net_raw < 0 ? "b neg" : "b zero";
-          const statusText =
+          const totalClass =
+            entry.total > 0 ? "b pos" : entry.total < 0 ? "b neg" : "b zero";
+          const hitText =
             entry.bets > 0
-              ? `${Math.round((entry.wins / entry.bets) * 100)}% 命中`
-              : "—";
+              ? ` · ${Math.round((entry.wins / entry.bets) * 100)}% 命中`
+              : "";
+          const redeemText =
+            entry.redeemed > 0 ? `已兑 ${entry.redeemed.toFixed(1)}` : "未兑换";
           return (
             <div key={entry.id}>
               <div className={isLeader ? "lr leader" : "lr"}>
@@ -42,11 +44,12 @@ export default async function LeaderboardPage() {
                   </div>
                   <div className="m">
                     {entry.bets} 场 · 猜中 {entry.wins}
+                    {hitText}
                   </div>
                 </span>
                 <span className="n">
-                  <div className={balanceClass}>{formatBottles(entry.net_raw)}</div>
-                  <div className="st">{statusText}</div>
+                  <div className={totalClass}>{formatBottles(entry.total)}</div>
+                  <div className="st">{redeemText}</div>
                 </span>
               </div>
               <hr className="rule" />

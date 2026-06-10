@@ -41,10 +41,11 @@ export function ProfileForm({
       setMsg(data.error ?? "保存失败");
       return;
     }
-    setMsg("✅ 已保存，正在返回首页…");
+    const isFirstSetup = initialEmoji === null;
+    setMsg(isFirstSetup ? "✅ 已保存，正在返回首页…" : "✅ 已保存");
     startTransition(() => {
       router.refresh();
-      router.push("/");
+      if (isFirstSetup) router.push("/");
     });
   }
 

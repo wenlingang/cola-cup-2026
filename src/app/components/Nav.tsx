@@ -26,7 +26,7 @@ function isActive(pathname: string, href: string): boolean {
 export function Nav({ user }: { user: NavUser }) {
   const pathname = usePathname();
   const tabs: Tab[] = user?.isSettler
-    ? [...TABS, { href: "/admin", icon: "⚙️", label: "结算" }]
+    ? [...TABS, { href: "/admin", icon: "⚙️", label: "管理" }]
     : TABS;
 
   return (
@@ -52,7 +52,7 @@ export function Nav({ user }: { user: NavUser }) {
             </nav>
             <div className="head-right">
               {user ? (
-                <Link className="identity" href="/identity">
+                <Link className="identity" href="/me">
                   {user.emoji ?? "👤"} {user.nickname}
                 </Link>
               ) : (

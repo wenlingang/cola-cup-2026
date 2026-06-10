@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getUserLedger, getUserNet } from "../../db/queries/ledger";
 import { getUserRedemptions } from "../../db/queries/redemptions";
 import { getCurrentUser } from "../../lib/identity";
@@ -13,27 +13,7 @@ export default async function MePage() {
   const user = await getCurrentUser();
 
   if (!user) {
-    return (
-      <section className="id-page">
-        <h1 className="disp">
-          还没有<br />
-          <em>身份</em> 👤
-        </h1>
-        <p className="lead">登录后才能查看你的可乐账本。</p>
-        <Link
-          href="/identity"
-          className="cta"
-          style={{
-            display: "inline-block",
-            textAlign: "center",
-            marginTop: 24,
-            padding: "14px 28px",
-          }}
-        >
-          🥤 设置身份
-        </Link>
-      </section>
-    );
+    redirect("/identity");
   }
 
   const ledger = getUserLedger(user.id);
@@ -46,7 +26,6 @@ export default async function MePage() {
   return (
     <section>
       <div className="me">
-        <h1 className="page-h disp">我的账本 🥤</h1>
         <div className="who">
           <span className="em">{user.emoji ?? "👤"}</span>
           <span>
@@ -65,7 +44,6 @@ export default async function MePage() {
         <p className="note">额度 = 累计赢得 − 已兑换。1 额度可兑 1 瓶可乐。</p>
       </div>
 
-      <div className="ledh disp">兑换饮料</div>
       <hr className="rule" />
       <RedeemPanel balance={balance} />
 

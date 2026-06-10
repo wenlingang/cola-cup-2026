@@ -127,3 +127,28 @@ export function updateProfile(
 export function listUsers(): User[] {
   return db.prepare("SELECT * FROM users ORDER BY created_at").all() as User[];
 }
+
+export type UserWithHandle = User & { handle: string | null };
+
+export function listUsersWithHandles(): UserWithHandle[] {
+  return db
+    .prepare(
+      `SELECT u.*,
+              (SELECT a.username FROM accounts a
+               WHERE a.user_id = u.id ORDER BY a.created_at LIMIT 1) AS handle
+       FROM users u ORDER BY u.created_at`,
+    )
+    .all() as UserWithHandle[];
+}
+
+/** Hide the user from the leaderboard, odds, vote rosters and settlement,
+ *  and block their login. Reversible via restoreUser. */
+export function softDeleteUser(userId: number): void {
+  db.prepare(
+    "UPDATE users SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
+  ).run(Date.now(), userId);
+}
+
+export function restoreUser(userId: number): void {
+  db.prepare("UPDATE users SET deleted_at = NULL WHERE id = ?").run(userId);
+}
