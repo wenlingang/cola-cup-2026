@@ -83,6 +83,7 @@
 }
 html {
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 body {
   margin: 0;
@@ -129,6 +130,9 @@ a {
 }
 
 /* ───────── header ───────── */
+:root {
+  --head-h: 66px; /* .site-head .bar height, excluding the 2px ink border */
+}
 .site-head {
   position: sticky;
   top: 0;
@@ -143,6 +147,16 @@ a {
   align-items: center;
   gap: 16px;
   padding: 14px 0 13px;
+  height: var(--head-h);
+}
+
+/* Turbo Drive's built-in progress bar, repositioned from the viewport top
+   onto the header's bottom ink rule. Works because .site-head is sticky at
+   top: 0, so its bottom edge is always --head-h from the viewport top. */
+.turbo-progress-bar {
+  top: calc(var(--head-h) - 3px);
+  height: 3px;
+  background: var(--red);
 }
 .wm {
   font-family: var(--disp);

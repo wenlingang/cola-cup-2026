@@ -1,6 +1,6 @@
 node_modules
 .git
-data
+node/data
 .cf-assets
 *.log
 .env*.local

@@ -1,0 +1,4 @@
+<div class="subtabs">
+  <%= link_to "🧾 结算", admin_root_path, class: ("on" if current_page?(admin_root_path)) %>
+  <%= link_to "👥 用户管理", admin_users_path, class: ("on" if current_page?(admin_users_path)) %>
+</div>

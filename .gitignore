@@ -5,10 +5,10 @@ build/
 .cf-assets/
 
 # SQLite database (local data, do not commit)
-data/backups/*
-data/*.db
-data/*.db-wal
-data/*.db-shm
+node/data/backups/*
+node/data/*.db
+node/data/*.db-wal
+node/data/*.db-shm
 
 # Local env
 .env*.local

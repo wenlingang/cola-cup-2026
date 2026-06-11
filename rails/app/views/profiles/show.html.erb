@@ -1,5 +1,6 @@
 <section>
   <%= turbo_stream_from current_user, "ledger" %>
+  <%= render "profiles/tabs" %>
   <div class="me">
     <div class="who">
       <span class="em"><%= current_user.emoji || "👤" %></span>

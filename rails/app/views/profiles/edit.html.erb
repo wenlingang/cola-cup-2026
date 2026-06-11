@@ -1,4 +1,5 @@
 <section class="id-page">
+  <%= render "profiles/tabs" %>
   <% @accounts.each do |account| %>
     <p class="lead">已用 <%= provider_label(account.provider) %> 登录<% if account.username.present? %> · @<%= account.username %><% end %></p>
   <% end %>
