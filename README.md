@@ -19,12 +19,12 @@
 
 | 目录 | 技术栈 | 状态 |
 |---|---|---|
-| [`node/`](node/) | Next.js 16 (App Router) + React 19 + better-sqlite3 + Auth.js | 初版，已上线运行 |
+| [`nextjs/`](nextjs/) | Next.js 16 (App Router) + React 19 + better-sqlite3 + Auth.js | 初版，已上线运行 |
 | [`rails/`](rails/) | Rails 8.1 + Hotwire + Solid Stack + Devise | 重写版，功能对齐并增强 |
 
-两版共用同一套环境变量约定（Twitter OAuth、`SETTLER_USERNAMES`、football-data key 等，对照表见 `rails/README.md`），数据可通过 `legacy:import` 从 Node 版的 SQLite 整库迁移到 Rails 版。部署都是单容器 Docker Compose + SQLite volume，监听宿主机 8026 端口。
+两版共用同一套环境变量约定（Twitter OAuth、`SETTLER_USERNAMES`、football-data key 等，对照表见 `rails/README.md`），数据可通过 `legacy:import` 从 Next.js 版的 SQLite 整库迁移到 Rails 版。部署都是单容器 Docker Compose + SQLite volume，监听宿主机 8026 端口。
 
-### Node 版（`node/`）的优点
+### Next.js 版（`nextjs/`）的优点
 
 - **前端生态与组件模型**：React 19 + App Router，交互组件（投票面板、赔率对比、管理后台）以客户端组件表达，前端同学上手成本低。
 - **类型贯穿全栈**：TypeScript 从 DB 查询层（better-sqlite3 同步 API）到页面组件端到端覆盖。
@@ -43,5 +43,5 @@
 
 两版各自的本地开发、Docker 部署、Twitter OAuth 配置、Tailscale 内网访问与运维细节，见各自目录下的 README：
 
-- Node 版：[`node/README.md`](node/README.md)
+- Next.js 版：[`nextjs/README.md`](nextjs/README.md)
 - Rails 版：[`rails/README.md`](rails/README.md)（含从零搭建 Ruby 环境的完整步骤、旧版数据迁移与故障排查）
