@@ -2,11 +2,14 @@
   <h1 class="disp">登录<br><em>参与竞猜</em> 🥤</h1>
   <p class="lead">登录后自动带入头像和昵称，登录后可改昵称。</p>
   <div style="padding-top: 32px">
+    <%# turbo: false — OmniAuth login must be a native full-page POST so the 302
+        to the (cross-origin) IdP is a top-level navigation. Under Turbo it would
+        be a fetch that follows the redirect and gets blocked by CORS. %>
     <% if AuthProviders.twitter_enabled? %>
-      <%= button_to "𝕏 用 Twitter 登录", "/users/auth/twitter2", class: "cta" %>
+      <%= button_to "𝕏 用 Twitter 登录", "/users/auth/twitter2", class: "cta", form: { data: { turbo: false } } %>
     <% end %>
     <% if AuthProviders.oidc_enabled? %>
-      <%= button_to AuthProviders.oidc_display_name, "/users/auth/openid_connect", class: "cta" %>
+      <%= button_to AuthProviders.oidc_display_name, "/users/auth/openid_connect", class: "cta", form: { data: { turbo: false } } %>
     <% end %>
     <% unless AuthProviders.any_enabled? %>
       <p class="lead">暂未配置登录方式，请联系管理员。</p>
