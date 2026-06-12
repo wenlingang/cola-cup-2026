@@ -10,6 +10,7 @@ RSpec.describe FetchOddsJob do
       id: "evt-1",
       slug: "brazil-vs-argentina-2026-06-11",
       title: "Brazil vs. Argentina",
+      volume: "123456.78",
       markets: [
         { slug: "x-brazil", question: "Will Brazil win?",
           outcomes: %w[Yes No].to_json, outcomePrices: [ "0.55", "0.45" ].to_json,
@@ -39,6 +40,7 @@ RSpec.describe FetchOddsJob do
     expect(poly.token_home).to eq("tk-bra")
     expect(poly.condition_id).to eq("c1")
     expect(poly.closed).to be false
+    expect(poly.volume).to be_within(1e-6).of(123_456.78)
 
     snapshot = match.odds_snapshots.where(source: "polymarket").order(:taken_at).last
     expect(snapshot.locked).to be false
@@ -54,5 +56,12 @@ RSpec.describe FetchOddsJob do
     expect { FetchOddsJob.perform_now }
       .to change { OddsSnapshot.where(source: "polymarket").count }.by(1)
       .and change { PolyMarket.count }.by(0)
+  end
+
+  it "stops refreshing market odds once the vote window has closed" do
+    match.update!(kickoff_at: 30.minutes.from_now)
+
+    expect { FetchOddsJob.perform_now }
+      .not_to change { OddsSnapshot.where(source: "polymarket").count }
   end
 end

@@ -2,10 +2,10 @@ class RedemptionsController < ApplicationController
   before_action :require_login!
 
   # Redeem credits for a drink. On success the personal page updates in place
-  # (balance big number + redeem panel + redemption records); on failure the
-  # panel re-renders with the Chinese error and a 422 so Turbo shows it without
-  # navigating. The balance is re-read server-side, so a stale client number can
-  # never overspend (the model re-checks inside its transaction).
+  # (balance big number + redeem panel + redemption records); on failure (an
+  # unknown drink or a non-positive quantity) the panel re-renders with the
+  # Chinese error and a 422 so Turbo shows it without navigating. Balance is not
+  # checked — redeeming is always allowed and the balance may go negative.
   def create
     Redemption.redeem!(user: current_user, drink_key: params[:drink].to_s, qty: redeem_qty)
     render_personal_state

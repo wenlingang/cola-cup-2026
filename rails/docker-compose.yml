@@ -43,6 +43,7 @@ services:
       # Optional interval overrides (minutes); blank → recurring.yml defaults.
       CRON_ODDS_MIN: ${CRON_ODDS_MIN:-}
       CRON_RESULTS_MIN: ${CRON_RESULTS_MIN:-}
+      CRON_LIVE_MIN: ${CRON_LIVE_MIN:-}
       CRON_SCHEDULE_MIN: ${CRON_SCHEDULE_MIN:-}
       # Single Puma process (no WEB_CONCURRENCY) with a 5-thread pool; the four
       # SQLite databases each size their connection pool to RAILS_MAX_THREADS.

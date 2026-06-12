@@ -42,7 +42,7 @@ RSpec.describe AutoSettleJob do
   end
 
   describe "scheduling from Match#record_result!" do
-    it "enqueues one delayed auto-settle per recorded result" do
+    it "enqueues an immediate auto-settle per recorded result" do
       fresh = create(:match, kickoff_at: 2.hours.ago)
 
       expect {
@@ -50,7 +50,7 @@ RSpec.describe AutoSettleJob do
       }.to have_enqueued_job(described_class).with(fresh.id).once
 
       enqueued = enqueued_jobs.find { |job| job["job_class"] == "AutoSettleJob" }
-      expect(enqueued["scheduled_at"]).to be_present
+      expect(enqueued["scheduled_at"]).to be_nil
     end
 
     it "does not enqueue when recording fails" do

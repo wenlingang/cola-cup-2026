@@ -1,16 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
 
-const EPSILON = 1e-9
-
-// Per-drink quantity stepper. The ± buttons clamp at 1, the hidden qty field
-// and the submit label ("兑换 · X") stay in sync, and the submit button is
-// disabled when the total cost exceeds the available balance. Mirrors the
-// legacy RedeemPanel client logic.
+// Per-drink quantity stepper. The ± buttons clamp at 1, and the hidden qty
+// field and the submit label ("兑换 · X") stay in sync. Redeeming is never
+// blocked by balance — anyone can redeem and the balance may go negative.
 export default class extends Controller {
   static targets = ["qty", "qtyInput", "submit", "dec"]
   static values = {
     cost: Number,
-    balance: Number,
     qty: { type: Number, default: 1 },
   }
 
@@ -36,7 +32,6 @@ export default class extends Controller {
     this.qtyTarget.textContent = qty
     this.qtyInputTarget.value = qty
     this.submitTarget.textContent = `兑换 · ${this.format(total)}`
-    this.submitTarget.disabled = this.balanceValue + EPSILON < total
     if (this.hasDecTarget) this.decTarget.disabled = qty <= 1
   }
 

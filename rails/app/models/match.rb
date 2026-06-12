@@ -22,6 +22,11 @@ class Match < ApplicationRecord
   VOTE_OPENS_DAYS_AHEAD = 7
   VOTE_CLOSES_BEFORE = 1.hour  # voting closes one hour before kickoff
 
+  # A match counts as in play from kickoff until its final result is recorded,
+  # capped at this window (90' + ET + penalties + stoppage) so a fixture whose
+  # result entry lags doesn't stay "live" forever.
+  LIVE_WINDOW = 3.hours
+
   STAGE_LABELS = {
     "group" => "小组赛", "r32" => "32 强", "r16" => "16 强", "qf" => "8 强",
     "sf" => "半决赛", "third" => "季军赛", "final" => "决赛"
@@ -51,6 +56,11 @@ class Match < ApplicationRecord
   # not yet settled — the LockDueMatchesJob freezes their binding odds.
   scope :due_for_lock, ->(now = Time.current) {
     where(settled: false).where(kickoff_at: ..(now + VOTE_CLOSES_BEFORE))
+  }
+  # Candidates for a live-score pull: kicked off within the live window, no
+  # final result yet. Lets the live sync skip the API call on quiet days.
+  scope :possibly_live, ->(now = Time.current) {
+    where(settled: false, result: nil).where(kickoff_at: (now - LIVE_WINDOW)..now)
   }
 
   # A recorded score/result (but not a settlement flag flip — SettlementJob owns
@@ -97,13 +107,18 @@ class Match < ApplicationRecord
     home_team_id.present? && away_team_id.present?
   end
 
-  # Precise port of the legacy deriveStatus state machine.
+  # Precise port of the legacy deriveStatus state machine, plus :live in play.
   def status(now: Time.current)
     return :settled if settled?
+    return :live if live?(now: now)
     return :locked if now >= vote_closes_at
     return :scheduled if now < vote_opens_at
 
     bettable? ? :open : :upcoming
+  end
+
+  def live?(now: Time.current)
+    !settled? && result.blank? && now >= kickoff_at && now < kickoff_at + LIVE_WINDOW
   end
 
   def votable?(now: Time.current)
@@ -139,8 +154,8 @@ class Match < ApplicationRecord
   # Record the score + result without settling (no ledger, settled stays false).
   # Used by the results sync (explicit winner, covering ET/penalties) and admin
   # score edits on un-settled matches (result derived from the score). Each
-  # successful record schedules a delayed auto-settlement for this match; the
-  # job no-ops if a settler (or an earlier run) settled it first.
+  # successful record immediately enqueues an auto-settlement for this match;
+  # the job no-ops if a settler (or an earlier run) settled it first.
   def record_result!(home_score:, away_score:, result: nil)
     raise DomainError, "该比赛已结算，请用修改比分" if settled?
 
@@ -156,6 +171,18 @@ class Match < ApplicationRecord
   # Correct or fill a settled match's display score without re-running settlement.
   def update_display_score!(home_score:, away_score:)
     update!(home_score: home_score, away_score: away_score)
+  end
+
+  # In-play score refresh: writes the score only, never the result — the result
+  # is the "finished" marker that feeds the settle list and auto-settlement, so
+  # a live score must not be mistakable for a final one. Returns true when the
+  # score changed; no-ops (false) once a result exists or the match settled.
+  def record_live_score!(home_score:, away_score:)
+    return false if settled? || result.present? || home_score.nil? || away_score.nil?
+    return false if self.home_score == home_score && self.away_score == away_score
+
+    update!(home_score: home_score, away_score: away_score)
+    true
   end
 
   def vote_tally

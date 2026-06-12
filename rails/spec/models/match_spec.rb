@@ -50,6 +50,54 @@ RSpec.describe Match do
     it "is not votable once locked" do
       expect(match.votable?(now: match.vote_closes_at)).to be(false)
     end
+
+    it "is :live from kickoff until a result is recorded" do
+      live = create(:match, kickoff_at: 1.hour.ago)
+      expect(live.status).to eq(:live)
+      expect(live.votable?).to be(false)
+
+      live.record_result!(home_score: 1, away_score: 0)
+      expect(live.status).to eq(:locked)
+    end
+
+    it "falls back from :live to :locked after LIVE_WINDOW without a result" do
+      stale = create(:match, kickoff_at: (Match::LIVE_WINDOW + 1.minute).ago)
+      expect(stale.status).to eq(:locked)
+    end
+  end
+
+  describe "#record_live_score!" do
+    let(:live_match) { create(:match, kickoff_at: 30.minutes.ago) }
+
+    it "updates the score without touching the result (so nothing can settle early)" do
+      expect(live_match.record_live_score!(home_score: 1, away_score: 0)).to be(true)
+
+      live_match.reload
+      expect(live_match.home_score).to eq(1)
+      expect(live_match.away_score).to eq(0)
+      expect(live_match.result).to be_nil
+      expect(live_match.settled).to be(false)
+      expect(live_match.status).to eq(:live)
+    end
+
+    it "does not enqueue an auto-settlement" do
+      expect { live_match.record_live_score!(home_score: 1, away_score: 0) }
+        .not_to have_enqueued_job(AutoSettleJob)
+    end
+
+    it "refuses once a result is recorded or the match is settled" do
+      finished = create(:match, :with_result, kickoff_at: 2.hours.ago)
+      expect(finished.record_live_score!(home_score: 9, away_score: 9)).to be(false)
+      expect(finished.reload.home_score).to eq(2)
+
+      settled = create(:match, :settled)
+      expect(settled.record_live_score!(home_score: 9, away_score: 9)).to be(false)
+    end
+
+    it "no-ops on an unchanged score" do
+      live_match.record_live_score!(home_score: 1, away_score: 0)
+      expect(live_match.record_live_score!(home_score: 1, away_score: 0)).to be(false)
+    end
   end
 
   describe "stage rules" do

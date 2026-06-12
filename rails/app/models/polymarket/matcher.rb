@@ -4,7 +4,7 @@ module Polymarket
   # legacy src/scripts/matchPolymarket.ts.
   module Matcher
     MatchedOdds = Data.define(
-      :match_id, :event_id, :slug,
+      :match_id, :event_id, :slug, :volume,
       :p_home, :p_draw, :p_away,
       :token_home, :token_draw, :token_away,
       :condition_id, :score
@@ -50,6 +50,7 @@ module Polymarket
         match_id: match_ref[:match_id],
         event_id: event[:id],
         slug: event[:slug],
+        volume: event[:volume],
         p_home: p_home,
         p_draw: p_draw,
         p_away: p_away,

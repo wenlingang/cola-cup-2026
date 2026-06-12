@@ -36,6 +36,6 @@ export default class extends Controller {
   matches(status) {
     if (this.filter === "all") return true
     if (this.filter === "open") return status === "open"
-    return status === "settled" || status === "locked"
+    return status === "settled" || status === "locked" || status === "live"
   }
 }

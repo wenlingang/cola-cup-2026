@@ -50,13 +50,13 @@ RSpec.describe "Redemptions", type: :request do
       expect(user.reload.net_balance).to eq(0.0)
     end
 
-    it "rejects with 422 and the shortfall message when the balance is insufficient" do
+    it "allows redeeming past the balance (it just goes negative)" do
       grant_balance(0.5)
 
-      expect { redeem(drink: "cola", qty: 1) }.not_to change(Redemption, :count)
+      expect { redeem(drink: "cola", qty: 1) }.to change(Redemption, :count).by(1)
 
-      expect(response).to have_http_status(422)
-      expect(response.body).to include("可用额度不足（需 1.0，余 0.5）")
+      expect(response).to have_http_status(:ok)
+      expect(user.reload.net_balance).to be_within(1e-9).of(-0.5)
     end
 
     it "rejects a non-positive quantity" do

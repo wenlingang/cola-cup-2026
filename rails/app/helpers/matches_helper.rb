@@ -6,6 +6,7 @@ module MatchesHelper
     scheduled: [ "scheduled", "未开放" ],
     upcoming:  [ "scheduled", "待开盘" ],
     open:      [ "open", "可预测" ],
+    live:      [ "live", "比赛中" ],
     locked:    [ "locked", "已截止" ],
     settled:   [ "settled", "已结算" ]
   }.freeze
@@ -18,6 +19,13 @@ module MatchesHelper
   def status_badge(status, extra_class: nil)
     css, label = STATUS_BADGE.fetch(status)
     tag.span(label, class: [ "badge", css, extra_class ].compact.join(" "))
+  end
+
+  # 焦点大战: top Polymarket-volume unsettled matches. Memoized per render so a
+  # full schedule page costs one query; broadcast re-renders work the same way.
+  def focus_match?(match)
+    @_focus_match_ids ||= PolyMarket.focus_match_ids
+    @_focus_match_ids.include?(match.id)
   end
 
   def match_group_letter(match)
@@ -42,9 +50,11 @@ module MatchesHelper
     end
   end
 
-  # Detail-page middle token — only reveals the score once the match is settled.
+  # Detail-page middle token — shows the live score while in play and the final
+  # score once settled; hides it in between so a pre-settlement correction
+  # isn't presented as final.
   def detail_score_token(match)
-    if match.settled? && match.home_score && match.away_score
+    if (match.settled? || match.live?) && match.home_score && match.away_score
       "#{match.home_score}–#{match.away_score}"
     else
       "VS"

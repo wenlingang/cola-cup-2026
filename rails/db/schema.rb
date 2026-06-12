@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_10_100011) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_12_100000) do
   create_table "accounts", force: :cascade do |t|
     t.string "avatar_url"
     t.datetime "created_at", null: false
@@ -94,6 +94,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_10_100011) do
     t.string "token_draw"
     t.string "token_home"
     t.datetime "updated_at", null: false
+    t.float "volume"
     t.index ["match_id"], name: "index_poly_markets_on_match_id", unique: true
   end
 

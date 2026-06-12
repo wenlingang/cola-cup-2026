@@ -62,7 +62,15 @@ module Polymarket
           condition_id: market["conditionId"]
         }
       end
-      { id: raw["id"].to_s, slug: raw["slug"], title: raw["title"], markets: markets }
+      {
+        id: raw["id"].to_s, slug: raw["slug"], title: raw["title"],
+        volume: parse_volume(raw), markets: markets
+      }
+    end
+
+    def parse_volume(raw)
+      value = raw["volume"] || raw["volumeNum"]
+      value.nil? ? nil : value.to_f
     end
 
     def parse_json_array(value)
@@ -79,10 +87,17 @@ module Polymarket
       []
     end
 
+    # Market odds stop refreshing once a match's vote window has closed (1h
+    # before kickoff): the binding line is already frozen by ensure_locked_odds!
+    # and in-play prices would just mirror the unfolding result.
     def write_odds(matched)
       taken_at = Time.current
+      matches_by_id = Match.where(id: matched.map(&:match_id)).index_by(&:id)
       ActiveRecord::Base.transaction do
         matched.each do |row|
+          match = matches_by_id[row.match_id]
+          next if match.nil? || taken_at >= match.vote_closes_at
+
           PolyMarket.find_or_initialize_by(match_id: row.match_id).update!(
             event_id: row.event_id,
             slug: row.slug,
@@ -92,6 +107,7 @@ module Polymarket
             token_away: row.token_away,
             match_method: "auto",
             match_score: row.score,
+            volume: row.volume,
             closed: false
           )
           OddsSnapshot.create!(

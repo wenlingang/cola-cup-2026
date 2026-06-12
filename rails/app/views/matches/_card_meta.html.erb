@@ -2,9 +2,16 @@
   <span class="time"><%= format_time_only(match.kickoff_at) %></span>
   <span>·</span>
   <span><%= Match.stage_label(match.stage) %><% if (letter = match_group_letter(match)) %> <%= letter %><% end %></span>
-  <% if match.status == :open %>
+  <% if focus_match?(match) %>
+    <span class="focus-mark" data-tip="焦点大战"
+          tabindex="0" role="img" aria-label="焦点大战">🔥</span>
+  <% end %>
+  <% case match.status %>
+  <% when :open %>
     <% mark_label = voted ? "已预测" : "待预测" %>
     <span class="todo-mark<%= " done" if voted %>" data-tip="<%= mark_label %>"
           tabindex="0" role="img" aria-label="<%= mark_label %>"><%= "✓" if voted %></span>
+  <% when :live %>
+    <span class="live-mark" data-tip="比赛中" tabindex="0" role="img" aria-label="比赛中"></span>
   <% end %>
 </div>

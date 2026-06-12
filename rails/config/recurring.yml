@@ -32,6 +32,13 @@ production: &production
     class: SyncResultsJob
     queue: default
     schedule: "<%= cron_for.call('CRON_RESULTS_MIN', 15) %>"
+  # Cheap to run often: it skips the API call entirely when nothing is in play,
+  # and an unchanged score writes/broadcasts nothing. Free tier allows 10
+  # requests/minute; this is at most 1/minute during live windows.
+  sync_live_scores:
+    class: SyncLiveScoresJob
+    queue: default
+    schedule: "<%= cron_for.call('CRON_LIVE_MIN', 1) %>"
   import_schedule:
     class: ImportScheduleJob
     queue: default
