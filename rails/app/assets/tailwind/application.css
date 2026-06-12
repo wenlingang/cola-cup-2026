@@ -536,6 +536,75 @@ main {
   color: var(--amber);
 }
 
+/* todo mark: per-card vote state on the schedule (empty circle = 待预测,
+   green check = 已预测); meaning surfaces as a hover/focus tooltip only. */
+.mrow .meta .todo-mark {
+  position: relative;
+  margin-left: auto;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--red);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: help;
+  outline: none;
+}
+.mrow .meta .todo-mark.done {
+  border-color: var(--win);
+  background: color-mix(in srgb, var(--win) 14%, transparent);
+  color: var(--win);
+}
+.mrow .meta .todo-mark[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: -4px;
+  white-space: nowrap;
+  background: var(--hi);
+  color: var(--bg);
+  font-family: var(--body);
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0;
+  padding: 5px 9px;
+  border-radius: 7px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease;
+  z-index: 60;
+}
+.mrow .meta .todo-mark[data-tip]::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  right: 3px;
+  border: 5px solid transparent;
+  border-top-color: var(--hi);
+  opacity: 0;
+  transition: opacity 0.16s ease;
+  pointer-events: none;
+  z-index: 60;
+}
+.mrow .meta .todo-mark[data-tip]:hover::after,
+.mrow .meta .todo-mark[data-tip]:focus::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+.mrow .meta .todo-mark[data-tip]:hover::before,
+.mrow .meta .todo-mark[data-tip]:focus::before {
+  opacity: 1;
+}
+
 /* ───────── match detail ───────── */
 .detail-head {
   display: flex;

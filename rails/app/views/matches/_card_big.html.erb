@@ -3,7 +3,9 @@
   <% case big[:kind] %>
   <% when :result %>
     <div class="pct score"><%= big[:label] %></div>
-    <div class="cap"><%= big[:cap] %></div>
+    <% if big[:cap] %>
+      <div class="cap"><%= big[:cap] %></div>
+    <% end %>
   <% when :market %>
     <div class="srclbl">市场·<%= big[:short] %></div>
     <div class="pct"><%= big[:pct] %>%</div>

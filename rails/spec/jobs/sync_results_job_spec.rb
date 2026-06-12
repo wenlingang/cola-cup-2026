@@ -16,6 +16,14 @@ RSpec.describe SyncResultsJob do
   end
 
   context "without FOOTBALL_DATA_API_KEY" do
+    # dotenv loads the real .env key in test, so unset it explicitly.
+    around do |example|
+      original = ENV.delete("FOOTBALL_DATA_API_KEY")
+      example.run
+    ensure
+      ENV["FOOTBALL_DATA_API_KEY"] = original if original
+    end
+
     it "is a no-op that makes no HTTP request" do
       result = FootballData::ResultsSync.run
       expect(result).to eq(recorded: 0, skipped: 0, unmatched: 0)

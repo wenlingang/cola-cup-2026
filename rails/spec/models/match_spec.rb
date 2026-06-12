@@ -17,11 +17,22 @@ RSpec.describe Match do
       expect(match.status(now: close + 1.second)).to eq(:locked)
     end
 
-    it "is :scheduled until vote_opens_at (1 week before kickoff), to ±1s" do
+    it "is :scheduled until vote_opens_at, to ±1s" do
       open = match.vote_opens_at
       expect(match.status(now: open - 1.second)).to eq(:scheduled)
       expect(match.status(now: open)).not_to eq(:scheduled)
       expect(match.status(now: open)).to eq(:open)
+    end
+
+    it "opens voting at Beijing midnight 6 days before the kickoff date" do
+      # Kickoff Monday 2026-06-22 20:00 Beijing (12:00 UTC) -> opens the
+      # previous Tuesday 2026-06-16 00:00 Beijing (06-15 16:00 UTC).
+      monday_match = create(:match, kickoff_at: Time.utc(2026, 6, 22, 12, 0))
+      expect(monday_match.vote_opens_at).to eq(Time.utc(2026, 6, 15, 16, 0))
+
+      # A 00:30 Beijing kickoff still counts by its calendar day.
+      early_match = create(:match, kickoff_at: Time.utc(2026, 6, 21, 16, 30))
+      expect(early_match.vote_opens_at).to eq(Time.utc(2026, 6, 15, 16, 0))
     end
 
     it "is :open inside the window when both teams are set" do

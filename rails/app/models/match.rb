@@ -16,7 +16,10 @@ class Match < ApplicationRecord
     "sf" => 5.0, "third" => 5.0, "final" => 5.0
   }.freeze
 
-  VOTE_OPENS_BEFORE = 7.days   # voting opens one week before kickoff
+  # Voting opens by calendar day (Beijing midnight), not kickoff-minus-7-days:
+  # a match is votable from 00:00 of the 6th day before its kickoff date, so on
+  # any morning the whole rolling 7-day slate (today .. day+6) is open at once.
+  VOTE_OPENS_DAYS_AHEAD = 7
   VOTE_CLOSES_BEFORE = 1.hour  # voting closes one hour before kickoff
 
   STAGE_LABELS = {
@@ -80,7 +83,8 @@ class Match < ApplicationRecord
   end
 
   def vote_opens_at
-    kickoff_at - VOTE_OPENS_BEFORE
+    kickoff_day = kickoff_at.in_time_zone(FormatHelper::DISPLAY_TIME_ZONE).to_date
+    (kickoff_day - (VOTE_OPENS_DAYS_AHEAD - 1)).in_time_zone(FormatHelper::DISPLAY_TIME_ZONE)
   end
 
   def vote_closes_at
@@ -134,7 +138,9 @@ class Match < ApplicationRecord
 
   # Record the score + result without settling (no ledger, settled stays false).
   # Used by the results sync (explicit winner, covering ET/penalties) and admin
-  # score edits on un-settled matches (result derived from the score).
+  # score edits on un-settled matches (result derived from the score). Each
+  # successful record schedules a delayed auto-settlement for this match; the
+  # job no-ops if a settler (or an earlier run) settled it first.
   def record_result!(home_score:, away_score:, result: nil)
     raise DomainError, "该比赛已结算，请用修改比分" if settled?
 
@@ -144,6 +150,7 @@ class Match < ApplicationRecord
     end
 
     update!(result: resolved, home_score: home_score, away_score: away_score, result_at: Time.current)
+    AutoSettleJob.schedule(self)
   end
 
   # Correct or fill a settled match's display score without re-running settlement.

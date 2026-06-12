@@ -64,7 +64,8 @@ module MatchesHelper
   # ScheduleTimeline.MatchBig: result > market leader (+divergence) > crowd
   # leader > nothing.
   def match_card_big(match, tally, market_snapshot)
-    return { kind: :result, label: RESULT_LABEL[match.result], cap: match.settled? ? "已结算" : "待结算" } if match.result.present?
+    # No cap once settled — the meta line's status badge already says 已结算.
+    return { kind: :result, label: RESULT_LABEL[match.result], cap: match.settled? ? nil : "待结算" } if match.result.present?
 
     allows_draw = match.allows_draw?
     market = market_pcts(market_snapshot, allows_draw)

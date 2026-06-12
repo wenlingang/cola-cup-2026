@@ -1,11 +1,14 @@
 # Pari-mutuel payout (pure, no writes): each loser forfeits exactly their stake
-# into the pool; the winners split that pool in proportion to their stake. The
-# batch is zero-sum, so total winnings can never exceed the pool — the house
-# never subsidises (it only keeps the remainder when nobody backed the winner).
-# d_used is the implied pool decimal for the bettor's own pick (total pool ÷
-# that pick's stake). Float math throughout, matching the legacy semantics.
+# into the pool; the winners split that pool in proportion to their stake. Each
+# winner's share is floored to 0.01 bottles, so the total paid out can never
+# exceed the pool — the house never subsidises (it keeps the sub-cent remainder,
+# and the whole pool when nobody backed the winner). d_used is the implied pool
+# decimal for the bettor's own pick (total pool ÷ that pick's stake).
 module PariMutuel
   Delta = Struct.new(:user_id, :pick, :stake, :d_used, :won, :delta, keyword_init: true)
+
+  # Absorbs float noise (e.g. 37.499999...) before flooring to hundredths.
+  FLOAT_SLACK = 1e-9
 
   # `votes` is any enumerable of objects responding to user_id / pick / stake
   # (Vote records work directly). `result` is the winning pick string.
@@ -21,7 +24,7 @@ module PariMutuel
       won = vote.pick == result
       delta =
         if won
-          win_stake.positive? ? (vote.stake / win_stake) * lose_stake : 0.0
+          win_stake.positive? ? floor_to_hundredth((vote.stake / win_stake) * lose_stake) : 0.0
         else
           -vote.stake
         end
@@ -34,4 +37,9 @@ module PariMutuel
       )
     end
   end
+
+  def self.floor_to_hundredth(value)
+    ((value * 100) + FLOAT_SLACK).floor / 100.0
+  end
+  private_class_method :floor_to_hundredth
 end

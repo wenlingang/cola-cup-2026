@@ -46,12 +46,13 @@ module FormatHelper
     "#{minutes}分钟后"
   end
 
-  # Net bottles with an explicit "+" for positive balances. "+2.5" / "-1.0" / "0.0".
+  # Net bottles with an explicit "+" for positive balances. "+2.50" / "-1.00" /
+  # "0.00". Two decimals so a settled payout renders exactly as stored.
   def format_bottles(value)
     number = value.to_f
-    number = 0.0 if number.zero? # collapse -0.0, matching JS (-0).toFixed(1)
+    number = 0.0 if number.zero? # collapse -0.0, matching JS (-0).toFixed(2)
     sign = number.positive? ? "+" : ""
-    "#{sign}#{to_fixed(number, 1)}"
+    "#{sign}#{to_fixed(number, 2)}"
   end
 
   # Bottle counts (stakes) printed like a JS number: whole values drop the

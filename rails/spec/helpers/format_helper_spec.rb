@@ -58,13 +58,13 @@ RSpec.describe FormatHelper, type: :helper do
   end
 
   describe "#format_bottles" do
-    it "prefixes positives with '+', keeps one decimal, and collapses -0.0" do
-      expect(helper.format_bottles(2.5)).to eq("+2.5")
-      expect(helper.format_bottles(-1.0)).to eq("-1.0")
-      expect(helper.format_bottles(0)).to eq("0.0")
-      expect(helper.format_bottles(-0.0)).to eq("0.0")
-      expect(helper.format_bottles(1.25)).to eq("+1.3")
-      expect(helper.format_bottles(3.14159)).to eq("+3.1")
+    it "prefixes positives with '+', keeps two decimals, and collapses -0.0" do
+      expect(helper.format_bottles(2.5)).to eq("+2.50")
+      expect(helper.format_bottles(-1.0)).to eq("-1.00")
+      expect(helper.format_bottles(0)).to eq("0.00")
+      expect(helper.format_bottles(-0.0)).to eq("0.00")
+      expect(helper.format_bottles(0.37)).to eq("+0.37")
+      expect(helper.format_bottles(3.14159)).to eq("+3.14")
     end
   end
 

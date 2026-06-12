@@ -43,6 +43,29 @@ RSpec.describe PariMutuel do
       expect(deltas.sum(&:delta)).to be_within(1e-9).of(0.0)
     end
 
+    it "floors each winner's share to two decimals so payouts never exceed the pool" do
+      # 8 winners over a pool of 3 -> raw share 0.375 each; floored to 0.37
+      # (a naive 1-decimal display rounded this to 0.4 x 8 = 3.2 from a 3 pool).
+      votes = (1..8).map { |id| bet(id, "home", 1.0) } +
+              [ bet(9, "draw", 1.0), bet(10, "away", 1.0), bet(11, "draw", 1.0) ]
+
+      deltas = described_class.deltas(votes, "home")
+
+      winners = deltas.select(&:won)
+      expect(winners.map(&:delta)).to all(eq(0.37))
+      expect(winners.sum(&:delta)).to be <= 3.0
+    end
+
+    it "keeps exact two-decimal shares intact when flooring" do
+      # pool = 1, three equal winners -> 0.33 each (0.99 paid, house keeps 0.01)
+      votes = [ bet(1, "home", 1.0), bet(2, "home", 1.0), bet(3, "home", 1.0),
+                bet(4, "away", 1.0) ]
+
+      deltas = described_class.deltas(votes, "home")
+
+      expect(deltas.select(&:won).map(&:delta)).to all(eq(0.33))
+    end
+
     it "leaves the pool unclaimed when no one backed the winner (house keeps it)" do
       votes = [ bet(1, "away", 1.0), bet(2, "draw", 2.0) ]
 
