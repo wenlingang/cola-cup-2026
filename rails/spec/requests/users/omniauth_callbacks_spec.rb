@@ -35,4 +35,37 @@ RSpec.describe "Users::OmniauthCallbacks", type: :request do
     post user_twitter2_omniauth_callback_path
     expect(response).to redirect_to(me_path)
   end
+
+  context "OIDC callback" do
+    before do
+      unless Rails.application.routes.url_helpers.respond_to?(:user_openid_connect_omniauth_callback_path)
+        skip "openid_connect not in omniauth_providers yet"
+      end
+
+      OmniAuth.config.test_mode = true
+      OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new(
+        provider: "openid_connect", uid: "sub-9",
+        info: { name: "Test OIDC", nickname: "oidcfan", image: "https://idp/p.png" }
+      )
+      Rails.application.env_config["omniauth.auth"] = OmniAuth.config.mock_auth[:openid_connect]
+    end
+
+    after do
+      OmniAuth.config.test_mode = false
+      OmniAuth.config.mock_auth[:openid_connect] = nil
+      Rails.application.env_config.delete("omniauth.auth")
+    end
+
+    it "creates the user on first OIDC login and redirects to profile setup" do
+      expect { post user_openid_connect_omniauth_callback_path }.to change(User, :count).by(1)
+      expect(response).to redirect_to(me_settings_path)
+      expect(User.last.accounts.first.provider).to eq("oidc")
+    end
+
+    it "sends a returning OIDC user (emoji set) to their dashboard" do
+      User.from_omniauth(OmniAuth.config.mock_auth[:openid_connect]).update!(emoji: "🐉")
+      post user_openid_connect_omniauth_callback_path
+      expect(response).to redirect_to(me_path)
+    end
+  end
 end

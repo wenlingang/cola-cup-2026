@@ -2,6 +2,17 @@ module Users
   class OmniauthCallbacksController < Devise::OmniauthCallbacksController
     # GET/POST /users/auth/twitter2/callback
     def twitter2
+      handle_omniauth
+    end
+
+    # GET/POST /users/auth/openid_connect/callback
+    def openid_connect
+      handle_omniauth
+    end
+
+    private
+
+    def handle_omniauth
       @user = User.from_omniauth(request.env["omniauth.auth"])
 
       if @user.persisted?
@@ -11,8 +22,6 @@ module Users
         redirect_to identity_path
       end
     end
-
-    private
 
     # First-time logins (no emoji chosen yet) land on the profile setup page;
     # returning users go to their dashboard.
