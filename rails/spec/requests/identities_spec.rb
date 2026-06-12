@@ -36,4 +36,12 @@ RSpec.describe "Identity (login) page", type: :request do
     expect(response.body).to include("暂未配置登录方式")
     expect(response.body).not_to include("/users/auth/")
   end
+
+  it "disables Turbo on the login forms so the IdP redirect is a full-page navigation" do
+    # Under Turbo the POST is a fetch that follows the cross-origin 302 to the
+    # IdP and gets CORS-blocked; the forms must opt out with data-turbo=false.
+    stub_providers(twitter: true, oidc: true)
+    get identity_path
+    expect(response.body.scan('data-turbo="false"').size).to eq(2)
+  end
 end
