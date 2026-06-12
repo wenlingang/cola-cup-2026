@@ -2,7 +2,7 @@
 
 - **Date:** 2026-06-12
 - **Scope:** `rails/` subproject
-- **Status:** Approved (design); spec under review
+- **Status:** Implemented (branch `feat/oidc-login`)
 
 ## Background
 

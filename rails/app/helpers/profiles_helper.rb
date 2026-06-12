@@ -5,7 +5,7 @@ module ProfilesHelper
     👑 🚀 ⚡ 🔥 🌟 🎯 🍺 🥤
   ].freeze
 
-  PROVIDER_LABELS = { "twitter" => "𝕏", "github" => "GitHub" }.freeze
+  PROVIDER_LABELS = { "twitter" => "𝕏", "github" => "GitHub", "oidc" => "OIDC" }.freeze
 
   def emoji_choices
     EMOJI_CHOICES
