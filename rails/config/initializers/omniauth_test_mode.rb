@@ -20,4 +20,13 @@ if Rails.env.development? && ENV["OMNIAUTH_MOCK"].present?
   )
 
   Rails.logger.info("[omniauth] dev mock enabled — @#{handle} (uid #{uid})")
+
+  if AuthProviders.oidc_enabled?
+    OmniAuth.config.mock_auth[:openid_connect] = OmniAuth::AuthHash.new(
+      provider: "openid_connect",
+      uid: uid,
+      info: { name: "测试用户", nickname: handle, image: nil }
+    )
+    Rails.logger.info("[omniauth] dev OIDC mock enabled — @#{handle} (sub #{uid})")
+  end
 end
