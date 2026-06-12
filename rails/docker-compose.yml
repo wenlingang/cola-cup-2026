@@ -22,6 +22,15 @@ services:
       # Twitter (X) OAuth 2.0 — Client ID / Secret from developer.x.com.
       AUTH_TWITTER_ID: ${AUTH_TWITTER_ID:-}
       AUTH_TWITTER_SECRET: ${AUTH_TWITTER_SECRET:-}
+      # OpenID Connect (OIDC) — optional second login provider, independent of
+      # Twitter. OIDC_ISSUER's presence turns it on; redirect_uri is built from
+      # AUTH_URL (so AUTH_URL must match the served origin and be registered at
+      # the IdP as <AUTH_URL>/users/auth/openid_connect/callback).
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      # OIDC login button label (default: "OIDC 登录").
+      OIDC_DISPLAY_NAME: ${OIDC_DISPLAY_NAME:-}
       # Settlement accounts (X usernames or numeric ids, comma-separated).
       SETTLER_USERNAMES: ${SETTLER_USERNAMES:-}
       # football-data.org token for auto score sync (optional; manual entry otherwise).
