@@ -1,14 +1,16 @@
 class User < ApplicationRecord
   # database_authenticatable is only the Warden base — there is no password entry
-  # (sessions/registrations/passwords routes are skipped); login is Twitter-only.
+  # (sessions/registrations/passwords routes are skipped); login is via OmniAuth
+  # providers (Twitter/X and/or OIDC).
   devise :database_authenticatable, :rememberable, :omniauthable,
-    omniauth_providers: [ :twitter2 ]
+    omniauth_providers: [ :twitter2, :openid_connect ]
 
   MAX_NICKNAME = 16
   FALLBACK_NICKNAME = "球迷"
-  # OmniAuth strategy is "twitter2"; we normalise the stored provider to "twitter"
-  # so legacy data and SETTLER_USERNAMES matching stay unchanged.
-  PROVIDER = "twitter"
+  # Maps the OmniAuth strategy name to the provider value stored on Account.
+  # "twitter2" is normalised to "twitter" so legacy data / SETTLER_USERNAMES
+  # matching stay unchanged.
+  PROVIDERS = { "twitter2" => "twitter", "openid_connect" => "oidc" }.freeze
 
   has_many :accounts, dependent: :destroy
   has_many :votes, dependent: :destroy
@@ -51,11 +53,12 @@ class User < ApplicationRecord
   # provider handle and avatar refresh on every login; the user's edited nickname
   # and emoji are never overwritten. Ports the legacy upsertOAuthUser.
   def self.from_omniauth(auth)
+    provider = PROVIDERS.fetch(auth.provider.to_s)
     provider_account_id = auth.uid.to_s
     username = auth.info.nickname.presence
-    avatar_url = normalize_avatar(auth.info.image)
+    avatar_url = avatar_for(auth.provider.to_s, auth.info.image)
 
-    account = Account.find_by(provider: PROVIDER, provider_account_id: provider_account_id)
+    account = Account.find_by(provider: provider, provider_account_id: provider_account_id)
     if account
       account.update!(username: username, avatar_url: avatar_url)
       account.user.update!(avatar_url: avatar_url) # nickname / emoji untouched
@@ -65,16 +68,18 @@ class User < ApplicationRecord
     transaction do
       user = create!(nickname: nickname_from(auth.info.name), avatar_url: avatar_url)
       user.accounts.create!(
-        provider: PROVIDER, provider_account_id: provider_account_id,
+        provider: provider, provider_account_id: provider_account_id,
         username: username, avatar_url: avatar_url
       )
       user
     end
   end
 
-  # Twitter serves a 48px "_normal" avatar; request the 400px variant instead.
-  def self.normalize_avatar(url)
-    url.presence&.sub("_normal", "_400x400")
+  # Twitter serves a 48px "_normal" avatar; request the 400px variant. Other
+  # providers (e.g. the OIDC `picture` claim) are used as-is.
+  def self.avatar_for(omniauth_provider, image)
+    url = image.presence
+    omniauth_provider == "twitter2" ? url&.sub("_normal", "_400x400") : url
   end
 
   def self.nickname_from(name)

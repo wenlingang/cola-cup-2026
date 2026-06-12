@@ -8,6 +8,13 @@ RSpec.describe User, ".from_omniauth" do
     )
   end
 
+  def oidc_auth_hash(uid: "sub-123", name: "Ada Lovelace", nickname: "ada", image: "https://idp/pic.png")
+    OmniAuth::AuthHash.new(
+      provider: "openid_connect", uid: uid,
+      info: { name: name, nickname: nickname, image: image }
+    )
+  end
+
   it "creates a user and a normalized account on first login" do
     expect { User.from_omniauth(auth_hash) }
       .to change(User, :count).by(1).and change(Account, :count).by(1)
@@ -52,5 +59,27 @@ RSpec.describe User, ".from_omniauth" do
     user.soft_delete!
     expect(user.active_for_authentication?).to be(false)
     expect(user.inactive_message).to eq(:deleted_account)
+  end
+
+  it "creates a user and an 'oidc' account on first OIDC login, sub as account id" do
+    expect { User.from_omniauth(oidc_auth_hash) }
+      .to change(User, :count).by(1).and change(Account, :count).by(1)
+
+    account = User.last.accounts.first
+    expect(account.provider).to eq("oidc")            # normalized from "openid_connect"
+    expect(account.provider_account_id).to eq("sub-123")
+    expect(account.username).to eq("ada")
+  end
+
+  it "uses the OIDC picture claim verbatim (no _400x400 rewrite)" do
+    user = User.from_omniauth(oidc_auth_hash(image: "https://idp/avatar_normal.png"))
+    expect(user.avatar_url).to eq("https://idp/avatar_normal.png") # unchanged
+  end
+
+  it "keeps Twitter and OIDC identities as separate users even with the same handle" do
+    twitter = User.from_omniauth(auth_hash(uid: "100", nickname: "samehandle"))
+    oidc    = User.from_omniauth(oidc_auth_hash(uid: "200", nickname: "samehandle"))
+    expect(oidc.id).not_to eq(twitter.id)
+    expect(Account.where(username: "samehandle").pluck(:provider)).to contain_exactly("twitter", "oidc")
   end
 end
