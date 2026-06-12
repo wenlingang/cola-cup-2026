@@ -38,6 +38,8 @@ gem "thruster", require: false
 gem "devise", "~> 5.0"
 gem "omniauth-twitter2"
 gem "omniauth-rails_csrf_protection"
+# Generic OpenID Connect login (second, optional provider alongside Twitter/X)
+gem "omniauth_openid_connect"
 
 # Framework-level zh-CN locale data (Devise flash messages, date formats)
 gem "rails-i18n", "~> 8.0"
