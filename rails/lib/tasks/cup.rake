@@ -7,10 +7,10 @@ namespace :cup do
     puts "[cup:fetch_odds] events=#{result[:events]} matched=#{result[:matched]} unmatched=#{result[:unmatched]}"
   end
 
-  desc "Sync finished results from football-data.org (records result + score, never settles)"
-  task sync_results: :environment do
-    result = FootballData::ResultsSync.run
-    puts "[cup:sync_results] recorded=#{result[:recorded]} skipped=#{result[:skipped]} unmatched=#{result[:unmatched]}"
+  desc "Sync live scores + final results from football-data.org (FINISHED fixtures record the result, which auto-settles)"
+  task sync_live: :environment do
+    result = FootballData::LiveScoresSync.run
+    puts "[cup:sync_live] live_updated=#{result[:live_updated]} results_recorded=#{result[:results_recorded]} skipped=#{result[:skipped]} unmatched=#{result[:unmatched]}"
   end
 
   desc "Re-import teams + fixtures from openfootball over the network (idempotent upsert)"

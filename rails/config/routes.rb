@@ -35,5 +35,8 @@ Rails.application.routes.draw do
     end
   end
 
+  # Solid Queue dashboard — gated by Admin::BaseController (settlers only).
+  mount MissionControl::Jobs::Engine, at: "/admin/jobs"
+
   get "up" => "rails/health#show", as: :rails_health_check
 end

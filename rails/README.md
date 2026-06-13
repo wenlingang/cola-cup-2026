@@ -174,7 +174,7 @@ docker compose up -d --build
 | 任务 | Job | 默认间隔 | 覆盖变量 | 说明 |
 |---|---|---|---|---|
 | 赔率 | `FetchOddsJob` | 60 分钟 | `CRON_ODDS_MIN` | 拉 Polymarket 概率（仅对比展示，带 UA / 退避防限流） |
-| 比分 | `SyncResultsJob` | 15 分钟 | `CRON_RESULTS_MIN` | 拉 football-data 已结束比赛，仅录入比分**不自动结算** |
+| 比分/结算 | `SyncLiveScoresJob` | 1 分钟 | `CRON_LIVE_MIN` | 拉 football-data：刷新进行中比分；比赛结束（FINISHED）即录入最终结果并**自动结算** |
 | 赛程 | `ImportScheduleJob` | 1440 分钟 | `CRON_SCHEDULE_MIN` | 重导赛程（淘汰赛对阵确定后按 external_key 原地更新） |
 | 锁盘 | `LockDueMatchesJob` | 10 分钟 | （固定） | 给即将开赛的比赛冻结投票赔率快照，幂等 |
 
@@ -183,11 +183,11 @@ docker compose up -d --build
 
 ```bash
 docker compose exec app bin/rails cup:fetch_odds       # 手动刷新 Polymarket 赔率
-docker compose exec app bin/rails cup:sync_results     # 手动同步 football-data 比分（不结算）
+docker compose exec app bin/rails cup:sync_live        # 手动同步 football-data 比分 + 结果（结束即结算）
 docker compose exec app bin/rails cup:import_schedule  # 手动重导赛程
 ```
 
-> 比分同步只录入比分、**不自动结算**；结算由结算账号在 `/admin` 后台手动发起（群众投票帕里-玛图尔现算）。
+> 比赛结束（football-data 标记 FINISHED）会**自动结算**（群众投票帕里-玛图尔现算）；超出直播窗口仍未收到结果的异常比赛（取消/弃赛/数据源故障）需由结算账号在 `/admin` 后台手动结算。
 
 ### 从旧版数据库迁移
 

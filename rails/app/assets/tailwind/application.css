@@ -308,6 +308,16 @@ main {
   box-shadow: inset 0 -2px 0 var(--red);
 }
 
+/* 已结束 view: finished matches newest-first (days and rows reversed) */
+.schedule-done #schedule {
+  display: flex;
+  flex-direction: column-reverse;
+}
+.schedule-done .day-rows {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
 /* day label */
 .daylabel {
   display: flex;

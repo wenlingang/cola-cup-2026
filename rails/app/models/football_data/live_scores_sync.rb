@@ -67,20 +67,37 @@ module FootballData
       home_score, away_score = our_scores(fd, fd_home_is_our_home)
 
       if status == FINISHED_STATUS
-        return :skipped if match.settled?
-
-        result = derive_result(fd, fd_home_is_our_home)
-        return :skipped if result.nil?
-
-        match.record_result!(home_score: home_score, away_score: away_score, result: result)
-        :results_recorded
+        record_final_result(match, fd, fd_home_is_our_home, home_score, away_score)
       elsif match.record_live_score!(home_score: home_score, away_score: away_score)
         :live_updated
       else
         :skipped
       end
-    rescue Match::DomainError, ActiveRecord::RecordInvalid
+    rescue Match::DomainError, ActiveRecord::RecordInvalid => e
+      Rails.logger.warn("[FootballData::LiveScoresSync] skipped fixture: #{e.class}: #{e.message}")
       :skipped
+    end
+
+    # Records the final result for a FINISHED fixture. Skips when the match is
+    # already settled, or already carries this exact result+score — so the
+    # every-minute pull doesn't re-record (and re-enqueue settlement) while an
+    # earlier AutoSettleJob is still in flight. A FINISHED payload occasionally
+    # omits fullTime while still naming a winner; keep the live-phase score
+    # rather than nulling it.
+    def record_final_result(match, fd, fd_home_is_our_home, home_score, away_score)
+      return :skipped if match.settled?
+
+      result = derive_result(fd, fd_home_is_our_home)
+      return :skipped if result.nil?
+
+      home_score = match.home_score if home_score.nil?
+      away_score = match.away_score if away_score.nil?
+      if match.result == result && match.home_score == home_score && match.away_score == away_score
+        return :skipped
+      end
+
+      match.record_result!(home_score: home_score, away_score: away_score, result: result)
+      :results_recorded
     end
 
     def idle

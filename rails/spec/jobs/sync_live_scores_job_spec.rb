@@ -133,6 +133,34 @@ RSpec.describe SyncLiveScoresJob do
       expect { SyncLiveScoresJob.perform_now }
         .not_to(change { settled.reload.attributes.slice("result", "home_score", "away_score", "settled") })
     end
+
+    it "does not re-record or re-enqueue settlement while a result is already set" do
+      match = create(:match, home_team: brazil, away_team: argentina, kickoff_at: 30.minutes.ago)
+      stub_request(:get, fd_url).to_return(
+        status: 200, body: live_payload(status: "FINISHED", winner: "HOME_TEAM", home: 2, away: 1)
+      )
+
+      SyncLiveScoresJob.perform_now
+      expect(match.reload.result).to eq("home")
+
+      # AutoSettleJob has not flipped `settled` yet; the next minute's pull must no-op.
+      expect { SyncLiveScoresJob.perform_now }.not_to have_enqueued_job(AutoSettleJob)
+    end
+
+    it "keeps the live-phase score when a FINISHED payload omits fullTime" do
+      match = create(:match, home_team: brazil, away_team: argentina, kickoff_at: 30.minutes.ago)
+      match.record_live_score!(home_score: 2, away_score: 1)
+      stub_request(:get, fd_url).to_return(
+        status: 200, body: live_payload(status: "FINISHED", winner: "HOME_TEAM", home: nil, away: nil)
+      )
+
+      SyncLiveScoresJob.perform_now
+
+      match.reload
+      expect(match.result).to eq("home")
+      expect(match.home_score).to eq(2)
+      expect(match.away_score).to eq(1)
+    end
   end
 
   describe "mixed payload" do

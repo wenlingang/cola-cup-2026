@@ -6,15 +6,17 @@
     <span class="sm"><% if primary %><%= date_label %> · <% end %><span data-schedule-filter-target="count"><%= day_matches.size %></span> 场</span>
   </div>
   <hr class="rule">
-  <% day_matches.each do |match| %>
-    <div id="match_card_<%= match.id %>" class="mrow-anchor"
-         data-schedule-filter-target="row" data-status="<%= match.status %>">
-      <%= render "matches/match_card",
-            match: match,
-            tally: @tallies[match.id] || Vote.empty_tally,
-            market: @market_odds[match.id],
-            voted: @voted_match_ids.include?(match.id) %>
-      <hr class="rule">
-    </div>
-  <% end %>
+  <div class="day-rows">
+    <% day_matches.each do |match| %>
+      <div id="match_card_<%= match.id %>" class="mrow-anchor"
+           data-schedule-filter-target="row" data-status="<%= match.status %>">
+        <%= render "matches/match_card",
+              match: match,
+              tally: @tallies[match.id] || Vote.empty_tally,
+              market: @market_odds[match.id],
+              voted: @voted_match_ids.include?(match.id) %>
+        <hr class="rule">
+      </div>
+    <% end %>
+  </div>
 </section>
