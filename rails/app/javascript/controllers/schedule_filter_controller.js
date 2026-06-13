@@ -1,9 +1,10 @@
 import { Controller } from "@hotwired/stimulus"
 
 // Client-side schedule filtering (比赛 / 已结束). "比赛" shows today's and
-// future matches by kickoff day; "已结束" shows settled matches from days
-// before today, newest day first. A tab is hidden when it has no matches, and
-// the default tab falls back to "已结束" once every match is finished.
+// future matches that aren't settled yet; "已结束" shows every settled match
+// (any day, including today), newest day first. A tab is hidden when it has no
+// matches, and the default tab falls back to "已结束" once every match is
+// finished.
 export default class extends Controller {
   static targets = ["tab", "section", "empty"]
   static values = { today: String }
@@ -68,7 +69,7 @@ export default class extends Controller {
   }
 
   shouldShow(status, dayKey, filter) {
-    if (filter === "done") return status === "settled" && dayKey < this.todayValue
-    return dayKey >= this.todayValue
+    if (filter === "done") return status === "settled"
+    return dayKey >= this.todayValue && status !== "settled"
   }
 }

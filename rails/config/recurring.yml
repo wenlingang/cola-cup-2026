@@ -37,10 +37,15 @@ production: &production
     class: SyncLiveScoresJob
     queue: default
     schedule: "<%= cron_for.call('CRON_LIVE_MIN', 1) %>"
+  # Runs every 3h (8×/day) rather than once: knockout slots only show real
+  # teams after openfootball backfills them upstream, at times we can't predict,
+  # so a frequent idempotent re-pull keeps the bracket fresh within a few hours
+  # of their update. The job is cheap (two ~20KB CDN-cached fetches + no-op
+  # upserts) and never touches result/score/settled, so this is safe to run often.
   import_schedule:
     class: ImportScheduleJob
     queue: default
-    schedule: "<%= cron_for.call('CRON_SCHEDULE_MIN', 1440) %>"
+    schedule: "<%= cron_for.call('CRON_SCHEDULE_MIN', 180) %>"
   lock_due_matches:
     class: LockDueMatchesJob
     queue: default

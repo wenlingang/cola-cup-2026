@@ -76,6 +76,17 @@ class Match < ApplicationRecord
     Broadcasts::MatchResultJob.perform_later(id)
   end
 
+  # A schedule import resolved a knockout slot to a real team (home/away team id
+  # changed) — push the new matchup to open pages. Result/score updates never
+  # touch the team ids, so this won't double-fire with broadcast_result_change.
+  after_commit :broadcast_fixture_change, on: :update
+
+  def broadcast_fixture_change
+    return unless saved_change_to_home_team_id? || saved_change_to_away_team_id?
+
+    Broadcasts::MatchScheduleJob.perform_later(id)
+  end
+
   class << self
     def knockout?(stage)
       KNOCKOUT_STAGES.include?(stage)
