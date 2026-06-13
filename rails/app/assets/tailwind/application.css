@@ -1153,7 +1153,10 @@ main {
   color: var(--hi);
 }
 .vrow .res {
-  font-size: 13px;
+  margin-left: auto;
+  font-family: var(--num);
+  font-weight: 700;
+  font-size: 13.5px;
 }
 .vrow .res.w {
   color: var(--win);
@@ -1240,11 +1243,21 @@ main {
   text-align: right;
 }
 .lr .n .b {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
   font-family: var(--disp);
   font-weight: 900;
   font-size: 30px;
   line-height: 0.84;
   white-space: nowrap;
+}
+.lr .n .b .lbl {
+  font-family: var(--body);
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--low);
 }
 .lr .n .b.pos {
   color: var(--win);
@@ -1260,6 +1273,12 @@ main {
   color: var(--low);
   margin-top: 3px;
   white-space: nowrap;
+}
+.lr .n .st.hint {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-decoration-color: var(--border-hi);
+  text-underline-offset: 2px;
 }
 
 /* ───────── me ───────── */
@@ -1367,14 +1386,25 @@ main {
   margin-top: 2px;
 }
 .led .d {
-  font-family: var(--disp);
-  font-weight: 900;
-  font-size: 24px;
+  text-align: right;
+  white-space: nowrap;
 }
-.led .d.pos {
+.led .d .amt {
+  display: block;
+  font-family: var(--disp);
+  font-weight: 800;
+  font-size: 18px;
+}
+.led .d .sub {
+  display: block;
+  font-size: 11px;
+  color: var(--low);
+  margin-top: 3px;
+}
+.led .d.w .amt {
   color: var(--win);
 }
-.led .d.neg {
+.led .d.l .amt {
   color: var(--loss);
 }
 
@@ -1427,6 +1457,11 @@ main {
   border-bottom: 1px solid var(--border);
   padding: 16px 16px 15px;
 }
+.drink .head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .drink .em {
   font-size: 30px;
   line-height: 1;
@@ -1435,12 +1470,11 @@ main {
   font-family: var(--disp);
   font-weight: 800;
   font-size: 20px;
-  margin-top: 8px;
 }
 .drink .note {
   font-size: 11.5px;
   color: var(--low);
-  margin-top: 3px;
+  margin-top: 8px;
 }
 .drink.unit {
   background: color-mix(in srgb, var(--red) 8%, transparent);
@@ -1569,31 +1603,6 @@ main {
   color: var(--low);
   font-size: 12.5px;
   margin-top: 3px;
-}
-
-.about .source {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 6px 0 0;
-}
-.about .source .market-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--market);
-  font-size: 13.5px;
-  border: 1px solid color-mix(in srgb, var(--market) 40%, transparent);
-  border-radius: 999px;
-  padding: 8px 16px;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
-}
-.about .source .market-link:hover {
-  background: color-mix(in srgb, var(--market) 14%, transparent);
-  border-color: var(--market);
 }
 
 /* ───────── mobile bottom tab bar ───────── */

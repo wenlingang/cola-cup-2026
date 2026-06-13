@@ -3,7 +3,6 @@
 // eagerLoadControllersFrom auto-discovery is gone).
 import { application } from "./application"
 
-import AdminTabsController from "./admin_tabs_controller"
 import CountdownController from "./countdown_controller"
 import EmojiPickerController from "./emoji_picker_controller"
 import HelloController from "./hello_controller"
@@ -15,7 +14,6 @@ import ScoreFormController from "./score_form_controller"
 import SettleSelectController from "./settle_select_controller"
 import VotePanelController from "./vote_panel_controller"
 
-application.register("admin-tabs", AdminTabsController)
 application.register("countdown", CountdownController)
 application.register("emoji-picker", EmojiPickerController)
 application.register("hello", HelloController)

@@ -4,7 +4,9 @@ class SyncLiveScoresJob < ApplicationJob
   def perform
     result = FootballData::LiveScoresSync.run
     Rails.logger.info(
-      "[SyncLiveScoresJob] updated=#{result[:updated]} skipped=#{result[:skipped]} unmatched=#{result[:unmatched]}"
+      "[SyncLiveScoresJob] live_updated=#{result[:live_updated]} " \
+      "results_recorded=#{result[:results_recorded]} skipped=#{result[:skipped]} " \
+      "unmatched=#{result[:unmatched]}"
     )
   end
 end

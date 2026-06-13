@@ -23,9 +23,11 @@ class Match < ApplicationRecord
   VOTE_CLOSES_BEFORE = 1.hour  # voting closes one hour before kickoff
 
   # A match counts as in play from kickoff until its final result is recorded,
-  # capped at this window (90' + ET + penalties + stoppage) so a fixture whose
-  # result entry lags doesn't stay "live" forever.
-  LIVE_WINDOW = 3.hours
+  # capped at this window so a fixture whose result entry lags — or one that was
+  # cancelled and never reports FINISHED — doesn't stay "live" forever. Sized to
+  # cover 90' + ET + penalties + stoppage/VAR with margin; past it the match
+  # needs manual settlement via the admin score entry.
+  LIVE_WINDOW = 6.hours
 
   STAGE_LABELS = {
     "group" => "小组赛", "r32" => "32 强", "r16" => "16 强", "qf" => "8 强",

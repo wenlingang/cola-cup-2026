@@ -29,5 +29,26 @@ module FootballData
       full_time = fd.dig("score", "fullTime") || {}
       [ full_time["home"], full_time["away"] ]
     end
+
+    # Our-perspective result for a FINISHED fixture: prefer football-data's
+    # winner (covers ET/penalties), fall back to the full-time score.
+    # fd_home_is_our_home maps their home/away to ours. nil when undecidable.
+    def derive_result(fd, fd_home_is_our_home)
+      case fd.dig("score", "winner")
+      when "HOME_TEAM" then return fd_home_is_our_home ? "home" : "away"
+      when "AWAY_TEAM" then return fd_home_is_our_home ? "away" : "home"
+      when "DRAW" then return "draw"
+      end
+
+      home, away = full_time_scores(fd)
+      return nil if home.nil? || away.nil?
+
+      our_home = fd_home_is_our_home ? home : away
+      our_away = fd_home_is_our_home ? away : home
+      return "home" if our_home > our_away
+      return "away" if our_home < our_away
+
+      "draw"
+    end
   end
 end

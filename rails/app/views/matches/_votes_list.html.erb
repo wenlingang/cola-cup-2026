@@ -1,4 +1,5 @@
 <% show_result = match.settled? && match.result.present? %>
+<% ledger_by_user = show_result ? LedgerEntry.where(match_id: match.id).index_by(&:user_id) : {} %>
 <% tag_class = { "home" => "tag h", "draw" => "tag d", "away" => "tag a" } %>
 <div class="voters" id="votes_list_<%= match.id %>">
   <h2 class="disp">
@@ -11,14 +12,17 @@
     </p>
   <% else %>
     <% votes.each do |vote| %>
-      <% won = show_result ? vote.pick == match.result : nil %>
+      <% entry = ledger_by_user[vote.user_id] %>
       <div class="vrow">
         <span class="em"><%= vote.user.emoji || "👤" %></span>
         <span class="nm"><%= vote.user.nickname %></span>
         <span class="<%= tag_class[vote.pick] %>"><%= pick_team_label(match, vote.pick) %></span>
-        <span class="pk">🥤 <b><%= bottles_count(vote.stake) %></b> 瓶</span>
-        <% unless won.nil? %>
-          <span class="<%= won ? "res w" : "res l" %>"><%= won ? "✓" : "✗" %></span>
+        <% if show_result %>
+          <% if entry %>
+            <span class="res <%= entry.delta >= 0 ? "w" : "l" %>"><%= format_bottles(entry.delta) %> 🥤</span>
+          <% end %>
+        <% else %>
+          <span class="pk">🥤 <b><%= bottles_count(vote.stake) %></b> 瓶</span>
         <% end %>
       </div>
     <% end %>

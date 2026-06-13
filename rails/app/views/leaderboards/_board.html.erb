@@ -18,8 +18,12 @@
           <div class="m"><%= bets %> 场 · 猜中 <%= wins %><% if bets > 0 %> · <%= (wins.to_f / bets * 100).round %>% 命中<% end %></div>
         </span>
         <span class="n">
-          <div class="<%= total_class %>"><%= format_bottles(total) %></div>
-          <div class="st"><%= redeemed > 0 ? "已兑 #{format('%.1f', redeemed)}" : "未兑换" %></div>
+          <div class="<%= total_class %>"><span class="lbl">战绩</span><%= format_bottles(total) %></div>
+          <% if redeemed > 0 %>
+            <div class="st hint" title="已兑换不计入排名">已兑 <%= format('%.1f', redeemed) %></div>
+          <% else %>
+            <div class="st">未兑换</div>
+          <% end %>
         </span>
       </div>
       <hr class="rule">

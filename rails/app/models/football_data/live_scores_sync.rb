@@ -1,13 +1,19 @@
 module FootballData
-  # Refreshes the live score of in-play World Cup matches from football-data.
-  # Scores only — the result (the "finished" marker that feeds the settle list
-  # and auto-settlement) is recorded exclusively by ResultsSync from FINISHED
-  # fixtures, so a live score can never settle a match early. Skips the API
-  # call entirely when no fixture is inside the live window.
+  # The single live-window sync. Every minute it pulls the recent World Cup
+  # fixtures and, in one pass, both refreshes in-play scores AND records the
+  # final result the moment football-data marks a fixture FINISHED — recording
+  # the result enqueues settlement (Match#record_result! → AutoSettleJob), so a
+  # finished match flips to "settled" within a minute. In-play scores are
+  # written without a result (record_live_score!), so a live score can never
+  # settle a match early; only a FINISHED fixture writes the result. Skips the
+  # API call entirely when no fixture is inside the live window.
   class LiveScoresSync
     include Matching
 
+    BASE = "https://api.football-data.org/v4".freeze
+    WORLD_CUP_CODE = "WC".freeze
     LIVE_STATUSES = %w[IN_PLAY PAUSED EXTRA_TIME PENALTY_SHOOTOUT].to_set.freeze
+    FINISHED_STATUS = "FINISHED".freeze
 
     def self.run
       new.run
@@ -24,44 +30,61 @@ module FootballData
 
       today = Time.current.utc.to_date
       data = HttpJson.get(
-        "#{ResultsSync::BASE}/competitions/#{ResultsSync::WORLD_CUP_CODE}/matches" \
-        "?dateFrom=#{today - 1}&dateTo=#{today + 1}",
+        "#{BASE}/competitions/#{WORLD_CUP_CODE}/matches" \
+        "?dateFrom=#{today - 2}&dateTo=#{today + 1}",
         headers: { "X-Auth-Token" => key }
       )
-      in_play = Array(data["matches"]).select { |fd| LIVE_STATUSES.include?(fd["status"]) }
       index = MatchIndex.build
 
-      updated = 0
-      skipped = 0
-      unmatched = 0
+      counts = idle
+      Array(data["matches"]).each do |fd|
+        status = fd["status"]
+        next unless LIVE_STATUSES.include?(status) || status == FINISHED_STATUS
 
-      in_play.each do |fd|
-        match_ref, fd_home_is_our_home = locate_match(fd, index)
-        if match_ref.nil?
-          unmatched += 1
-          next
-        end
-
-        match = Match.find_by(id: match_ref[:match_id])
-        home_score, away_score = our_scores(fd, fd_home_is_our_home)
-        if match&.record_live_score!(home_score: home_score, away_score: away_score)
-          updated += 1
-        else
-          skipped += 1
-        end
+        counts[sync_fixture(fd, index, status)] += 1
       end
 
       Rails.logger.info(
-        "[FootballData::LiveScoresSync] in_play=#{in_play.size} updated=#{updated} " \
-        "skipped=#{skipped} unmatched=#{unmatched}"
+        "[FootballData::LiveScoresSync] live_updated=#{counts[:live_updated]} " \
+        "results_recorded=#{counts[:results_recorded]} skipped=#{counts[:skipped]} " \
+        "unmatched=#{counts[:unmatched]}"
       )
-      { updated: updated, skipped: skipped, unmatched: unmatched }
+      counts
     end
 
     private
 
+    # Maps one football-data fixture onto our match and applies it by status:
+    # a live status refreshes the score only; FINISHED records the final result
+    # (which enqueues settlement). Returns the tally key for this fixture.
+    def sync_fixture(fd, index, status)
+      match_ref, fd_home_is_our_home = locate_match(fd, index)
+      return :unmatched if match_ref.nil?
+
+      match = Match.find_by(id: match_ref[:match_id])
+      return :skipped if match.nil?
+
+      home_score, away_score = our_scores(fd, fd_home_is_our_home)
+
+      if status == FINISHED_STATUS
+        return :skipped if match.settled?
+
+        result = derive_result(fd, fd_home_is_our_home)
+        return :skipped if result.nil?
+
+        match.record_result!(home_score: home_score, away_score: away_score, result: result)
+        :results_recorded
+      elsif match.record_live_score!(home_score: home_score, away_score: away_score)
+        :live_updated
+      else
+        :skipped
+      end
+    rescue Match::DomainError, ActiveRecord::RecordInvalid
+      :skipped
+    end
+
     def idle
-      { updated: 0, skipped: 0, unmatched: 0 }
+      { live_updated: 0, results_recorded: 0, skipped: 0, unmatched: 0 }
     end
   end
 end

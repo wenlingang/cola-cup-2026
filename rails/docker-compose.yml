@@ -37,12 +37,11 @@ services:
       FOOTBALL_DATA_API_KEY: ${FOOTBALL_DATA_API_KEY:-}
       # Run the Solid Queue supervisor inside Puma — no separate worker container.
       SOLID_QUEUE_IN_PUMA: "true"
-      # Built-in recurring jobs (odds/results/schedule/lock). false → entrypoint
+      # Built-in recurring jobs (odds/live/schedule/lock). false → entrypoint
       # exports SOLID_QUEUE_SKIP_RECURRING=true so nothing is scheduled.
       RUN_SCHEDULER: ${RUN_SCHEDULER:-true}
       # Optional interval overrides (minutes); blank → recurring.yml defaults.
       CRON_ODDS_MIN: ${CRON_ODDS_MIN:-}
-      CRON_RESULTS_MIN: ${CRON_RESULTS_MIN:-}
       CRON_LIVE_MIN: ${CRON_LIVE_MIN:-}
       CRON_SCHEDULE_MIN: ${CRON_SCHEDULE_MIN:-}
       # Single Puma process (no WEB_CONCURRENCY) with a 5-thread pool; the four

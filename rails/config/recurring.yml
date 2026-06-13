@@ -28,13 +28,11 @@ production: &production
     class: FetchOddsJob
     queue: default
     schedule: "<%= cron_for.call('CRON_ODDS_MIN', 60) %>"
-  sync_results:
-    class: SyncResultsJob
-    queue: default
-    schedule: "<%= cron_for.call('CRON_RESULTS_MIN', 15) %>"
-  # Cheap to run often: it skips the API call entirely when nothing is in play,
-  # and an unchanged score writes/broadcasts nothing. Free tier allows 10
-  # requests/minute; this is at most 1/minute during live windows.
+  # Refreshes in-play scores and records final results (a finished fixture
+  # flips to settled within a minute). Cheap to run often: it skips the API call
+  # entirely when nothing is in play, and an unchanged score writes/broadcasts
+  # nothing. Free tier allows 10 requests/minute; this is at most 1/minute
+  # during live windows.
   sync_live_scores:
     class: SyncLiveScoresJob
     queue: default
