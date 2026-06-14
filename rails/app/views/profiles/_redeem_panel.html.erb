@@ -1,4 +1,5 @@
 <div id="redeem_panel" class="redeem">
+  <p class="redeem-pickup">🥤 可乐自行在饮料处领取</p>
   <% Drink::ALL.each do |drink| %>
     <%= form_with url: redemptions_path, method: :post, class: "rdrink",
                   data: { controller: "qty-stepper", qty_stepper_cost_value: drink.cost } do |form| %>

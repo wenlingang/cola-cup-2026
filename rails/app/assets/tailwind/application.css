@@ -1619,6 +1619,12 @@ main {
   opacity: 0.4;
   cursor: not-allowed;
 }
+.redeem-pickup {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--hi);
+  margin: 0 0 6px;
+}
 .redeem-hint {
   font-size: 12px;
   color: var(--low);
