@@ -1,5 +1,8 @@
 <div id="redeem_panel" class="redeem">
-  <p class="redeem-pickup">🥤 可乐自行在饮料处领取</p>
+  <div class="redeem-tip">
+    <p class="redeem-pickup">🥤 可乐自行在饮料处领取</p>
+    <p class="redeem-free">没额度、<b>负分也能兑</b> —— 想喝就兑，账上记成负数，赛季结束再统一结算。</p>
+  </div>
   <% Drink::ALL.each do |drink| %>
     <%= form_with url: redemptions_path, method: :post, class: "rdrink",
                   data: { controller: "qty-stepper", qty_stepper_cost_value: drink.cost } do |form| %>
@@ -22,5 +25,4 @@
   <% if local_assigns[:error].present? %>
     <p class="formerror"><%= error %></p>
   <% end %>
-  <p class="redeem-hint">兑换后自动扣额度，线下凭记录领饮料。额度不够也能兑 —— 账上会记成负数，赛季结束再结算。</p>
 </div>
