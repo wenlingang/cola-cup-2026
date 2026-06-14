@@ -9,5 +9,7 @@
           tabindex="0" role="img" aria-label="<%= mark_label %>"><%= "✓" if voted %></span>
   <% when :live %>
     <span class="live-mark" data-tip="比赛中" tabindex="0" role="img" aria-label="比赛中"></span>
+  <% when :locked %>
+    <span class="lock-mark" data-tip="已截止" tabindex="0" role="img" aria-label="已截止">🔒</span>
   <% end %>
 </div>

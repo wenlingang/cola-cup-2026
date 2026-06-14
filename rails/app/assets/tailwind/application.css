@@ -608,7 +608,18 @@ main {
     box-shadow: 0 0 0 0 transparent;
   }
 }
-.mrow :is(.todo-mark, .live-mark, .focus-mark)[data-tip]::after {
+/* lock mark: padlock emoji once voting has closed */
+.mrow .meta .lock-mark {
+  position: relative;
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 13px;
+  line-height: 1;
+  cursor: help;
+  outline: none;
+  opacity: 0.78;
+}
+.mrow :is(.todo-mark, .live-mark, .focus-mark, .lock-mark)[data-tip]::after {
   content: attr(data-tip);
   position: absolute;
   bottom: calc(100% + 8px);
@@ -631,7 +642,7 @@ main {
     transform 0.16s ease;
   z-index: 60;
 }
-.mrow :is(.todo-mark, .live-mark, .focus-mark)[data-tip]::before {
+.mrow :is(.todo-mark, .live-mark, .focus-mark, .lock-mark)[data-tip]::before {
   content: "";
   position: absolute;
   bottom: calc(100% + 2px);
@@ -643,13 +654,13 @@ main {
   pointer-events: none;
   z-index: 60;
 }
-.mrow :is(.todo-mark, .live-mark, .focus-mark)[data-tip]:hover::after,
-.mrow :is(.todo-mark, .live-mark, .focus-mark)[data-tip]:focus::after {
+.mrow :is(.todo-mark, .live-mark, .focus-mark, .lock-mark)[data-tip]:hover::after,
+.mrow :is(.todo-mark, .live-mark, .focus-mark, .lock-mark)[data-tip]:focus::after {
   opacity: 1;
   transform: translateY(0);
 }
-.mrow :is(.todo-mark, .live-mark, .focus-mark)[data-tip]:hover::before,
-.mrow :is(.todo-mark, .live-mark, .focus-mark)[data-tip]:focus::before {
+.mrow :is(.todo-mark, .live-mark, .focus-mark, .lock-mark)[data-tip]:hover::before,
+.mrow :is(.todo-mark, .live-mark, .focus-mark, .lock-mark)[data-tip]:focus::before {
   opacity: 1;
 }
 
