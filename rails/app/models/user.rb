@@ -12,6 +12,16 @@ class User < ApplicationRecord
   # matching stay unchanged.
   PROVIDERS = { "twitter2" => "twitter", "openid_connect" => "oidc" }.freeze
 
+  LEADERBOARD_CACHE_KEY = "leaderboard/v1".freeze
+
+  # One cached leaderboard row. Holds only primitives so it Marshals cleanly into
+  # Solid Cache — caching the AR rows would drag along attribute/type metadata and
+  # the virtual select columns. Exposes exactly the readers leaderboards/_board
+  # uses; to_param keeps user_path(entry) generating /users/:id.
+  Entry = Data.define(:id, :avatar_url, :emoji, :nickname, :total, :redeemed, :bets, :wins) do
+    def to_param = id.to_s
+  end
+
   has_many :accounts, dependent: :destroy
   has_many :votes, dependent: :destroy
   has_many :ledger_entries, dependent: :destroy
@@ -34,10 +44,26 @@ class User < ApplicationRecord
   end
 
   # Leaderboard ranked by total score (Σ delta) — pure betting performance,
-  # redemptions reported alongside but never lower the rank. One query; returns
-  # User rows carrying the extra total / redeemed / bets / wins attributes.
-  # Soft-deleted users are excluded.
+  # redemptions reported alongside but never lower the rank. Returns Entry rows
+  # carrying total / redeemed / bets / wins; soft-deleted users are excluded.
+  #
+  # Cached in Solid Cache under a key stamped with leaderboard_signature, so the
+  # cache self-invalidates whenever any input changes — no per-model hooks, which
+  # matters because settlements write ledger rows via LedgerEntry.insert_all and
+  # bypass callbacks. Both the leaderboard page and the broadcast job
+  # (Broadcasts::Renderable#broadcast_leaderboard) call this and share the result.
   def self.leaderboard
+    Rails.cache.fetch("#{LEADERBOARD_CACHE_KEY}/#{leaderboard_signature}", expires_in: 12.hours) do
+      leaderboard_relation.map do |row|
+        Entry.new(
+          id: row.id, avatar_url: row.avatar_url, emoji: row.emoji, nickname: row.nickname,
+          total: row.total.to_f, redeemed: row.redeemed.to_f, bets: row.bets.to_i, wins: row.wins.to_i
+        )
+      end
+    end
+  end
+
+  def self.leaderboard_relation
     active
       .select(
         "users.id, users.avatar_url, users.emoji, users.nickname, users.created_at",
@@ -47,6 +73,19 @@ class User < ApplicationRecord
         "COALESCE((SELECT SUM(won) FROM ledger_entries WHERE user_id = users.id), 0) AS wins"
       )
       .order(Arel.sql("total DESC, bets DESC, users.created_at ASC"))
+  end
+
+  # Cheap signature that advances whenever a leaderboard input changes: ledger
+  # inserts (incl. settlement's insert_all) and redemptions bump a max(:id);
+  # nickname/emoji edits and soft delete/restore bump users.updated_at. Far
+  # cheaper than the per-user correlated subqueries it guards.
+  def self.leaderboard_signature
+    [
+      LedgerEntry.maximum(:id),
+      Redemption.maximum(:id),
+      User.maximum(:updated_at).to_f,
+      User.active.count
+    ].join("-")
   end
 
   # Link an OAuth identity to a user, creating the user on first login. The

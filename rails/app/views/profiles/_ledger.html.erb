@@ -1,4 +1,3 @@
-<% show_miss = local_assigns.fetch(:show_miss, true) %>
 <% ledger.each do |row| %>
   <%= link_to match_path(row.match), class: "led" do %>
     <span class="dot <%= row.won ? "w" : "l" %>"></span>
@@ -8,7 +7,7 @@
     </span>
     <span class="d <%= row.won ? "w" : "l" %>">
       <span class="amt"><%= row.won ? "赢" : "请" %> <%= format("%.2f", row.delta.abs) %> 🥤</span>
-      <span class="sub">押 <%= bottles_count(row.stake) %> 瓶<%= " · 未中" if !row.won && show_miss %></span>
+      <span class="sub">押 <%= bottles_count(row.stake) %> 瓶</span>
     </span>
   <% end %>
   <hr class="rule">

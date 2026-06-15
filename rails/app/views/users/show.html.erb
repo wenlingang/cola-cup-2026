@@ -18,7 +18,7 @@
   <% if @ledger.empty? %>
     <p style="padding:32px 0;text-align:center;color:var(--low);font-size:13px">TA 还没有结算记录</p>
   <% else %>
-    <%= render "profiles/ledger", ledger: @ledger, show_miss: false %>
+    <%= render "profiles/ledger", ledger: @ledger %>
   <% end %>
 
   <%= render "profiles/redemption_records", redemptions: @redemptions %>

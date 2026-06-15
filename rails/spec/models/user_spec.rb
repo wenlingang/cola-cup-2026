@@ -54,6 +54,52 @@ RSpec.describe User do
     end
   end
 
+  # The test env cache is :null_store (never caches), so swap in a real store to
+  # exercise the signature-keyed caching and its self-invalidation.
+  describe ".leaderboard caching" do
+    let(:store) { ActiveSupport::Cache::MemoryStore.new }
+
+    before { allow(Rails).to receive(:cache).and_return(store) }
+
+    it "returns Entry value objects whose to_param routes to the user" do
+      user = create(:user)
+      create(:ledger_entry, user: user, delta: 4.0, won: true)
+
+      entry = User.leaderboard.first
+      expect(entry).to be_a(User::Entry)
+      expect(entry.to_param).to eq(user.id.to_s)
+      expect(entry.total).to be_within(1e-9).of(4.0)
+    end
+
+    it "self-invalidates when a settlement inserts ledger rows via insert_all" do
+      user = create(:user)
+      create(:ledger_entry, user: user, delta: 2.0, won: true)
+      expect(User.leaderboard.first.total).to be_within(1e-9).of(2.0)
+
+      # Mirrors Settlement#write_ledger, which bypasses model callbacks.
+      match = create(:match)
+      LedgerEntry.insert_all([ {
+        match_id: match.id, user_id: user.id, pick: "home", stake: 1.0,
+        d_used: 2.0, won: true, delta: 3.0,
+        created_at: Time.current, updated_at: Time.current
+      } ])
+
+      expect(User.leaderboard.first.total).to be_within(1e-9).of(5.0)
+    end
+
+    it "self-invalidates on a redemption and on a nickname edit" do
+      user = create(:user, nickname: "旧名")
+      create(:ledger_entry, user: user, delta: 1.0)
+      expect(User.leaderboard.first.redeemed).to eq(0.0)
+
+      create(:redemption, user: user, cost: 2.5)
+      expect(User.leaderboard.first.redeemed).to be_within(1e-9).of(2.5)
+
+      user.update!(nickname: "新名")
+      expect(User.leaderboard.first.nickname).to eq("新名")
+    end
+  end
+
   describe "#settler?" do
     around do |example|
       original = ENV["SETTLER_USERNAMES"]
