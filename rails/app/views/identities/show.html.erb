@@ -14,7 +14,7 @@
       <%= button_to "用 𝕏 登录", "/users/auth/twitter2", class: "cta brand-x", form: { data: { turbo: false } } %>
     <% end %>
     <% if AuthProviders.oidc_enabled? %>
-      <%= button_to AuthProviders.oidc_display_name, "/users/auth/openid_connect", class: "cta", form: { data: { turbo: false } } %>
+      <%= button_to "用 Longbridge 登录", "/users/auth/openid_connect", class: "cta", form: { data: { turbo: false } } %>
     <% end %>
     <% unless AuthProviders.any_enabled? %>
       <p class="lead">暂未配置登录方式，请联系管理员。</p>

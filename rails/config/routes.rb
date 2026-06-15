@@ -3,7 +3,7 @@ Rails.application.routes.draw do
     skip: [ :sessions, :registrations, :passwords ],
     controllers: { omniauth_callbacks: "users/omniauth_callbacks" }
   devise_scope :user do
-    delete "/logout", to: "devise/sessions#destroy", as: :destroy_user_session
+    delete "/logout", to: "users/sessions#destroy", as: :destroy_user_session
   end
 
   root "matches#index"
