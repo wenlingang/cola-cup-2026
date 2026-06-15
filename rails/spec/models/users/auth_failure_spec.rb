@@ -46,3 +46,63 @@ RSpec.describe Users::AuthFailure, ".reason_for" do
     expect(described_class.reason_for(nil)).to be_nil
   end
 end
+
+RSpec.describe Users::AuthFailure, ".response_for" do
+  def env_for(error, cookie: nil)
+    env = { "omniauth.error" => error }
+    env["HTTP_COOKIE"] = cookie if cookie
+    env
+  end
+
+  def dissect(response)
+    status, headers, _body = response.to_a
+    flat = headers.to_h.transform_keys(&:downcase)
+    [ status, flat["location"], Array(flat["set-cookie"]).join("\n") ]
+  end
+
+  def x_error(status:, body: "", headers: {})
+    response = Struct.new(:status, :body, :headers).new(status, body, headers)
+    Struct.new(:response).new(response)
+  end
+
+  it "self-heals a stale request-phase CSRF token: bounce to a fresh login + guard cookie" do
+    status, location, set_cookie = dissect(
+      described_class.response_for(env_for(ActionController::InvalidAuthenticityToken.new))
+    )
+
+    expect(status).to eq(302)
+    expect(location).to eq("/identity?auth_retry=1")
+    expect(set_cookie).to include("auth_retry=1")
+  end
+
+  it "treats a stale callback state/nonce mismatch as recoverable too" do
+    _status, location, _ = dissect(described_class.response_for(env_for(RuntimeError.new("csrf_detected"))))
+    expect(location).to eq("/identity?auth_retry=1")
+  end
+
+  it "stops after one bounce: a second consecutive failure goes to the error page" do
+    _status, location, _ = dissect(
+      described_class.response_for(
+        env_for(ActionController::InvalidAuthenticityToken.new, cookie: "auth_retry=1")
+      )
+    )
+
+    expect(location).to eq("/auth/error")
+  end
+
+  it "routes a suspended X account to the error page with the reason cookie" do
+    _status, location, set_cookie = dissect(
+      described_class.response_for(env_for(x_error(status: 403, body: "user-suspended")))
+    )
+
+    expect(location).to eq("/auth/error")
+    expect(set_cookie).to include("x_auth_error=suspended")
+  end
+
+  it "routes a genuinely unknown error to the generic error page without a reason cookie" do
+    _status, location, set_cookie = dissect(described_class.response_for(env_for(RuntimeError.new("boom"))))
+
+    expect(location).to eq("/auth/error")
+    expect(set_cookie).not_to include("x_auth_error")
+  end
+end

@@ -1020,6 +1020,18 @@ main {
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* X (Twitter) brand button: solid black with white logo/text, matching X's
+   official "Sign in with X" treatment and setting it apart from the red CTA. */
+.cta.brand-x {
+  background: #000;
+  color: #fff;
+  border-color: #000;
+}
+.cta.brand-x:hover {
+  /* brightness() on pure black is a no-op, so lighten the fill directly. */
+  filter: none;
+  background: #2a2a2a;
+}
 .cta.outline {
   background: transparent;
   color: var(--hi);

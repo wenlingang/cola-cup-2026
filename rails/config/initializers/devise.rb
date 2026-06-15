@@ -344,17 +344,10 @@ Devise.setup do |config|
   # config.sign_in_after_change_password = true
 end
 
-# Custom OmniAuth failure handling: translate X OAuth errors into the
-# x_auth_error cookie the /auth/error page reads, then 302 there. Mirrors the
-# legacy authError.ts protocol (suspended account / rate-limited with reset).
+# Custom OmniAuth failure handling. Users::AuthFailure decides the destination:
+# terminal X conditions (suspended / rate-limited) go to /auth/error with a
+# reason cookie; a stale handshake token (the common InvalidAuthenticityToken
+# after a logout/back-button) self-heals by bouncing to a fresh /identity.
 OmniAuth.config.on_failure = proc do |env|
-  reason = Users::AuthFailure.reason_for(env["omniauth.error"])
-  response = Rack::Response.new([], 302, { "Location" => "/auth/error" })
-  if reason
-    response.set_cookie(
-      Users::AuthFailure::COOKIE,
-      value: reason[:value], path: "/", max_age: reason[:ttl], same_site: :lax
-    )
-  end
-  response.finish
+  Users::AuthFailure.response_for(env).finish
 end

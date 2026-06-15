@@ -1,4 +1,9 @@
 <section class="id-page">
+  <% if params[:auth_retry].present? %>
+    <p class="lead" style="color:#b45309">
+      登录会话已自动刷新（多因退出后或登录页停留过久），请再点一次下面的按钮登录即可，<strong>无需清理 Cookie</strong>。
+    </p>
+  <% end %>
   <h1 class="disp">登录<br><em>参与竞猜</em> 🥤</h1>
   <p class="lead">登录后自动带入头像和昵称，登录后可改昵称。</p>
   <div style="padding-top: 32px">
@@ -6,7 +11,7 @@
         to the (cross-origin) IdP is a top-level navigation. Under Turbo it would
         be a fetch that follows the redirect and gets blocked by CORS. %>
     <% if AuthProviders.twitter_enabled? %>
-      <%= button_to "𝕏 用 Twitter 登录", "/users/auth/twitter2", class: "cta", form: { data: { turbo: false } } %>
+      <%= button_to "用 𝕏 登录", "/users/auth/twitter2", class: "cta brand-x", form: { data: { turbo: false } } %>
     <% end %>
     <% if AuthProviders.oidc_enabled? %>
       <%= button_to AuthProviders.oidc_display_name, "/users/auth/openid_connect", class: "cta", form: { data: { turbo: false } } %>
